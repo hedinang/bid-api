@@ -107,6 +107,9 @@ public class BidApiApplication {
                 List<WebElement> webElements = driver.findElements(By.className("slick-slide"));
                 webElements.forEach(webElement -> {
                     System.out.println("web element : " + webElement.getText());
+//                    webElement.findElements(By.className("top-auction-card-detail")).get(0).findElements(By.tagName("img")).get(0).getAttribute("src")
+                    String url = webElement.findElement(By.tagName("img")).getAttribute("src");
+                    System.out.println("web url : " + url);
                 });
 
                 // You can also scrape other elements or perform actions like clicking buttons, etc.
