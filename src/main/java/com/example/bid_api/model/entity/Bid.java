@@ -19,7 +19,10 @@ public class Bid extends MongoBaseEntity {
     private ObjectId id;
     @Indexed(unique = true)
     @Field(name = "bid_id")
-    private String bidId = StringUtil.generateId();
+//    private String bidId = StringUtil.generateId();
+    private String bidId;
+    @Field(name = "detail_url")
+    private String detailUrl;
 
     @Field(name = "bid_status")
     private String bidStatus;
@@ -33,6 +36,10 @@ public class Bid extends MongoBaseEntity {
     @Field(name = "end_preview_time")
     private String endPreviewTime;
 
+    @Field(name = "time_status")
+    private String timeStatus;
+
     @Field(name = "open_time")
     private String openTime;
+
 }

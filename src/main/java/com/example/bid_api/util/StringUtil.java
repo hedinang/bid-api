@@ -6,10 +6,7 @@ import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
+import java.net.*;
 import java.util.*;
 
 public class StringUtil {
@@ -125,5 +122,19 @@ public class StringUtil {
             return "";
         }
         return filePath.substring(lastIndexOfDot);
+    }
+
+    public static Map<String, String> getQueryParams(String query) throws Exception {
+        Map<String, String> queryParams = new HashMap<>();
+        if (query != null && !query.isEmpty()) {
+            String[] pairs = query.split("&");
+            for (String pair : pairs) {
+                String[] keyValue = pair.split("=");
+                String key = URLDecoder.decode(keyValue[0], "UTF-8");
+                String value = keyValue.length > 1 ? URLDecoder.decode(keyValue[1], "UTF-8") : "";
+                queryParams.put(key, value);
+            }
+        }
+        return queryParams;
     }
 }

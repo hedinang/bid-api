@@ -1,7 +1,10 @@
 package com.example.bid_api.service.impl;
 
 import com.example.bid_api.model.entity.Bid;
+import com.example.bid_api.repository.mongo.BidRepository;
 import com.example.bid_api.service.BidService;
+import com.example.bid_api.util.StringUtil;
+import com.example.bid_api.util.date.DateUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.*;
@@ -9,17 +12,19 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class BidServiceImpl implements BidService {
+    private final BidRepository bidRepository;
 
     @Override
     public List<Bid> getList() {
-        return List.of();
+        return bidRepository.findAll();
     }
 
     @Override
@@ -48,17 +53,46 @@ public class BidServiceImpl implements BidService {
                 // Now that the page is loaded with cookies, you can interact with it
                 // For example, find an element and print its text
                 List<WebElement> webElements = driver.findElements(By.className("slick-slide"));
-                webElements.forEach(webElement -> {
-                    String url = webElement.findElement(By.tagName("img")).getAttribute("src");
-                    System.out.println("web url : " + url);
-                    List<WebElement> previews = webElement.findElement(By.className("preview-box")).findElements(By.className("box"));
-                    System.out.println("start-time : " + previews.get(0).getText());
-                    System.out.println("end-time : " + previews.get(1).getText());
-                    System.out.println("market-info : " + webElement.findElement(By.className("market-info")).getText());
-                    System.out.println("market-title : " + webElement.findElement(By.className("market-title")).getText());
-                    System.out.println("date-time : " + webElement.findElement(By.className("datetime")).getText());
-                });
+                List<Bid> bids = new ArrayList<>();
 
+                for (WebElement webElement : webElements) {
+                    System.out.println("data " + webElement.getText());
+
+                    if (extractDateTime(webElement) == null) continue;
+                    Bid bid = new Bid();
+                    bid.setBidStatus(extractBidStatus(webElement));
+                    bid.setHeaderIcon(extractIconUrl(webElement));
+                    bid.setTimeStatus(extractTimeStatus(webElement));
+                    String detailUrl = extractDetailUrl(webElement);
+                    String startPreviewTime = extractStartTime(webElement);
+                    String endPreviewTime = extractEndTime(webElement);
+                    String openDate = extractDateTime(webElement);
+
+                    URL url = new URL(detailUrl);
+                    String query = url.getQuery();
+                    Map<String, String> queryParams = StringUtil.getQueryParams(query);
+                    String bidId = queryParams.get("auctions");
+                    bid.setDetailUrl(detailUrl);
+                    bid.setBidId(bidId);
+
+                    if (startPreviewTime != null) {
+                        startPreviewTime = startPreviewTime.replace("〜", "").trim();
+                        bid.setStartPreviewTime(DateUtil.formatStringToDate(startPreviewTime, "MMM,dd,yyyy HH:mm"));
+                    }
+
+                    if (endPreviewTime != null) {
+                        endPreviewTime = endPreviewTime.replace("〜", "").trim();
+                        bid.setEndPreviewTime(DateUtil.formatStringToDate(endPreviewTime, "MMM,dd,yyyy HH:mm"));
+                    }
+
+                    if (openDate != null) {
+                        openDate = openDate.replace("〜", "").trim();
+                        bid.setOpenTime(DateUtil.formatStringToDate(openDate, "MMM,dd,yyyy HH:mm"));
+                    }
+
+                    bids.add(bid);
+                }
+                bidRepository.saveAll(bids);
                 // You can also scrape other elements or perform actions like clicking buttons, etc.
             } finally {
                 // Close the browser after usage
@@ -66,6 +100,70 @@ public class BidServiceImpl implements BidService {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public String extractDetailUrl(WebElement element) {
+        try {
+            return element.findElement(By.tagName("a")).getAttribute("href");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String extractBidStatus(WebElement element) {
+        try {
+            return element.findElement(By.className("en")).getText();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String extractIconUrl(WebElement element) {
+        try {
+            return element.findElement(By.tagName("img")).getAttribute("src");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String extractStartTime(WebElement element) {
+        try {
+            return element.findElement(By.className("preview-box")).findElement(By.className("box")).findElements(By.tagName("span")).get(0).getText();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String extractEndTime(WebElement element) {
+        try {
+            return element.findElement(By.className("preview-box")).findElement(By.className("box")).findElements(By.tagName("span")).get(1).getText();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String extractTimeStatus(WebElement element) {
+        try {
+            return element.findElement(By.className("market-info")).getText();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String extractTitle(WebElement element) {
+        try {
+            return element.findElement(By.className("market-title")).getText();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String extractDateTime(WebElement element) {
+        try {
+            return element.findElement(By.className("datetime")).getText();
+        } catch (Exception e) {
+            return null;
         }
     }
 }

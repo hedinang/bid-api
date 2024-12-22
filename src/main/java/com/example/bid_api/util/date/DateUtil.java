@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 
 
@@ -48,4 +49,17 @@ public class DateUtil {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         return localDateTime.format(formatter);
     }
+
+    public static String formatStringToDate(String date, String format) {
+        SimpleDateFormat inputFormat = new SimpleDateFormat(format, Locale.ENGLISH);
+        SimpleDateFormat mongoFormat = new SimpleDateFormat("HH:mm:ss yyyy-MM-dd", Locale.ENGLISH);
+        Date parsedDate = null;
+        try {
+            parsedDate = inputFormat.parse(date);
+        } catch (ParseException e) {
+            return null;
+        }
+        return mongoFormat.format(parsedDate);
+    }
+
 }
