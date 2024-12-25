@@ -28,4 +28,5 @@ public class BidController {
         bidService.sync();
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
     }
+
 }

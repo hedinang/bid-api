@@ -42,4 +42,6 @@ public class Bid extends MongoBaseEntity {
     @Field(name = "open_time")
     private String openTime;
 
+    @Field(name = "cloned")
+    private boolean cloned;
 }
