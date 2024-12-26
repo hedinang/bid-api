@@ -5,10 +5,7 @@ import com.example.bid_api.service.BidService;
 import com.example.bid_api.util.response.BaseResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,6 +18,11 @@ public class BidController {
     @GetMapping("list")
     public BaseResponse<List<Bid>> list() {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getList());
+    }
+
+    @GetMapping("/{bidId}")
+    public BaseResponse<Bid> get(@PathVariable String bidId) {
+        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getBid(bidId));
     }
 
     @PostMapping("sync")

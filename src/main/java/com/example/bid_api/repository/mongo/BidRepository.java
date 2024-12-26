@@ -8,5 +8,7 @@ import java.util.List;
 public interface BidRepository extends MongoRepository<Bid, String> {
     List<Bid> findByDetailUrlIn(List<String> detailUrls);
 
+    Bid findByBidId(String bid);
+
     void deleteByDetailUrlNotIn(List<String> detailUrls);
 }

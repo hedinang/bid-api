@@ -7,5 +7,7 @@ import java.util.List;
 public interface BidService {
     List<Bid> getList();
 
+    Bid getBid(String bidId);
+
     void sync();
 }

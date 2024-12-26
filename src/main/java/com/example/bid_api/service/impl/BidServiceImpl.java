@@ -33,6 +33,11 @@ public class BidServiceImpl implements BidService {
     }
 
     @Override
+    public Bid getBid(String bidId) {
+        return bidRepository.findByBidId(bidId);
+    }
+
+    @Override
     public void sync() {
         try {
             System.setProperty("webdriver.chrome.driver", "D:/lib/chromedriver-win64/chromedriver.exe");
