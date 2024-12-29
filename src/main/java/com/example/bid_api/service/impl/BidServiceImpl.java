@@ -7,6 +7,7 @@ import com.example.bid_api.repository.mongo.ItemRepository;
 import com.example.bid_api.service.BidService;
 import com.example.bid_api.util.StringUtil;
 import com.example.bid_api.util.date.DateUtil;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.*;
@@ -26,6 +27,7 @@ import java.util.regex.Pattern;
 public class BidServiceImpl implements BidService {
     private final BidRepository bidRepository;
     private final ItemRepository itemRepository;
+    private WebDriver driver;
 
     @Override
     public List<Bid> getList() {
@@ -38,220 +40,164 @@ public class BidServiceImpl implements BidService {
     }
 
     @Override
+    @Transactional
     public void sync() {
         try {
             System.setProperty("webdriver.chrome.driver", "D:/lib/chromedriver-win64/chromedriver.exe");
             String clientUrl = "https://www.ecoauc.com/client";
             // Initialize WebDriver with Chrome options
             ChromeOptions options = new ChromeOptions();
-            WebDriver driver = new ChromeDriver(options);
-            try {
-                driver.manage().window().setSize(new Dimension(2400, 800));
-                driver.get(clientUrl);
-                // Define the cookies to set (from CakePHP session)
-                Map<String, String> cookies = Map.of(
-                        "CAKEPHP", "ru7ug964i030381l89eoev1u7e"
-                );
-                // Add the cookies to the browser session
-                for (Map.Entry<String, String> entry : cookies.entrySet()) {
-                    Cookie cookie = new Cookie(entry.getKey(), entry.getValue());
-                    driver.manage().addCookie(cookie);
-                }
-                // After adding cookies, refresh the page to apply the cookies
-                driver.navigate().refresh();
-                // Now that the page is loaded with cookies, you can interact with it
-                // For example, find an element and print its text
-                List<WebElement> webElements = driver.findElements(By.className("slick-slide"));
-                List<Bid> bids = new ArrayList<>();
+            driver = new ChromeDriver(options);
+            driver.manage().window().setSize(new Dimension(2400, 2000));
+            driver.get(clientUrl);
+            driver.manage().addCookie(new Cookie("CAKEPHP", "ru7ug964i030381l89eoev1u7e"));
+            driver.get(clientUrl);
+            List<WebElement> webElements = driver.findElements(By.className("slick-slide"));
+            List<Bid> bids = new ArrayList<>();
 
-                for (WebElement webElement : webElements) {
-                    System.out.println("data " + webElement.getText());
+            for (WebElement webElement : webElements) {
+                if (extractDateTime(webElement) == null) continue;
+                Bid bid = new Bid();
+                bid.setBidStatus(extractBidStatus(webElement));
+                bid.setHeaderIcon(extractIconUrl(webElement));
+                bid.setTimeStatus(extractTimeStatus(webElement));
+                String detailUrl = extractDetailUrl(webElement);
+                String startPreviewTime = extractStartTime(webElement);
+                String endPreviewTime = extractEndTime(webElement);
+                String openDate = extractDateTime(webElement);
 
-                    if (extractDateTime(webElement) == null) continue;
-                    Bid bid = new Bid();
-                    bid.setBidStatus(extractBidStatus(webElement));
-                    bid.setHeaderIcon(extractIconUrl(webElement));
-                    bid.setTimeStatus(extractTimeStatus(webElement));
-                    String detailUrl = extractDetailUrl(webElement);
-                    String startPreviewTime = extractStartTime(webElement);
-                    String endPreviewTime = extractEndTime(webElement);
-                    String openDate = extractDateTime(webElement);
+                URL url = new URL(detailUrl);
+                String query = url.getQuery();
+                Map<String, String> queryParams = StringUtil.getQueryParams(query);
+                String bidId = queryParams.get("auctions");
+                bid.setDetailUrl(detailUrl);
+                bid.setBidId(bidId);
 
-                    URL url = new URL(detailUrl);
-                    String query = url.getQuery();
-                    Map<String, String> queryParams = StringUtil.getQueryParams(query);
-                    String bidId = queryParams.get("auctions");
-                    bid.setDetailUrl(detailUrl);
-                    bid.setBidId(bidId);
-
-                    if (startPreviewTime != null) {
-                        startPreviewTime = startPreviewTime.replace("〜", "").trim();
-                        bid.setStartPreviewTime(DateUtil.formatStringToDate(startPreviewTime, "MMM,dd,yyyy HH:mm"));
-                    }
-
-                    if (endPreviewTime != null) {
-                        endPreviewTime = endPreviewTime.replace("〜", "").trim();
-                        bid.setEndPreviewTime(DateUtil.formatStringToDate(endPreviewTime, "MMM,dd,yyyy HH:mm"));
-                    }
-
-                    if (openDate != null) {
-                        openDate = openDate.replace("〜", "").trim();
-                        bid.setOpenTime(DateUtil.formatStringToDate(openDate, "MMM,dd,yyyy HH:mm"));
-                    }
-
-                    bid.setCloned(false);
-                    bids.add(bid);
+                if (startPreviewTime != null) {
+                    startPreviewTime = startPreviewTime.replace("〜", "").trim();
+                    bid.setStartPreviewTime(DateUtil.formatStringToDate(startPreviewTime, "MMM,dd,yyyy HH:mm"));
                 }
 
-                List<String> bidDetailUrls = bids.stream().map(Bid::getDetailUrl).toList();
-                List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
-                List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
-                List<Bid> newBids = bids.stream().filter(bid -> !existedDetailUrls.contains(bid.getDetailUrl())).toList();
-                bidRepository.deleteByDetailUrlNotIn(bidDetailUrls);
-                bidRepository.saveAll(newBids);
-                //special
-
-                for (Bid newBid : existedBids) {
-                    int totalItem = getTotalItem(newBid.getDetailUrl());
-                    if (totalItem == 0) continue;
-
-                    int pages = (int) Math.ceil((double) totalItem / 50);
-                    for (int i = 0; i < pages; i++) {
-                        syncItem(newBid.getDetailUrl(), i + 1, newBid.getBidId());
-                    }
+                if (endPreviewTime != null) {
+                    endPreviewTime = endPreviewTime.replace("〜", "").trim();
+                    bid.setEndPreviewTime(DateUtil.formatStringToDate(endPreviewTime, "MMM,dd,yyyy HH:mm"));
                 }
 
+                if (openDate != null) {
+                    openDate = openDate.replace("〜", "").trim();
+                    bid.setOpenTime(DateUtil.formatStringToDate(openDate, "MMM,dd,yyyy HH:mm"));
+                }
 
-            } finally {
-                // Close the browser after usage
-                driver.quit();
+                bid.setCloned(false);
+                bids.add(bid);
             }
+
+            List<String> bidDetailUrls = bids.stream().map(Bid::getDetailUrl).toList();
+            List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
+            List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
+            List<Bid> newBids = bids.stream().filter(bid -> !existedDetailUrls.contains(bid.getDetailUrl())).toList();
+            bidRepository.deleteByDetailUrlNotIn(bidDetailUrls);
+            for (Bid newBid : newBids) {
+                int totalItem = getTotalItem(newBid.getDetailUrl());
+                newBid.setTotalItem(totalItem);
+            }
+            bidRepository.saveAll(newBids);
+            for (Bid newBid : newBids.subList(0, 3)) {
+                int totalItem = newBid.getTotalItem();
+                if (totalItem == 0) continue;
+                int pages = (int) Math.ceil((double) totalItem / 50);
+                for (int i = 0; i < 1; i++) {
+                    syncItem(newBid.getDetailUrl(), i + 1, newBid.getBidId());
+                }
+            }
+
+
         } catch (Exception e) {
             log.error(e.toString());
         }
+
+        driver.quit();
     }
 
     private void syncItem(String clientUrl, int page, String bidId) {
-        System.setProperty("webdriver.chrome.driver", "D:/lib/chromedriver-win64/chromedriver.exe");
-        // Initialize WebDriver with Chrome options
-        ChromeOptions options = new ChromeOptions();
-        WebDriver driver = new ChromeDriver(options);
         try {
-            driver.manage().window().setSize(new Dimension(2400, 2000));
             driver.get(clientUrl + "&page=" + page);
-            // Define the cookies to set (from CakePHP session)
-            Map<String, String> cookies = Map.of(
-                    "CAKEPHP", "ru7ug964i030381l89eoev1u7e"
-            );
-            // Add the cookies to the browser session
-            for (Map.Entry<String, String> entry : cookies.entrySet()) {
-                Cookie cookie = new Cookie(entry.getKey(), entry.getValue());
-                driver.manage().addCookie(cookie);
-            }
-            // After adding cookies, refresh the page to apply the cookies
-            driver.navigate().refresh();
-            // Now that the page is loaded with cookies, you can interact with it
-            // For example, find an element and print its text
             List<WebElement> webElements = driver.findElements(By.className("card"));
-            List<Item> itemList = webElements.subList(0, 1).stream().map(we -> extractItemDetail(we, bidId)).toList();
+            if (webElements.size() < 10) return;
+            List<Item> itemList = new ArrayList<>();
+            for (WebElement we : webElements.subList(0, 10)) {
+                Item item = new Item();
+                item.setBidId(bidId);
+                String itemDetailUrl = we.findElement(By.tagName("a")).getAttribute("href");
+                List<WebElement> basicInfo = we.findElements(By.tagName("li"));
+                item.setRank(basicInfo.get(0).getText().split("\n")[1]);
+                item.setStartPrice(basicInfo.get(1).getText().split("\n")[1]);
+                item.setAuctionOrder(basicInfo.get(2).getText().split("\n")[1]);
+                item.setItemUrl(itemDetailUrl);
+                item.setTitle(we.findElement(By.tagName("b")).getText());
+                item.setItemId(extractItemId(itemDetailUrl));
+                itemList.add(item);
+            }
+
+            for (Item item : itemList) {
+                item.setDetailUrls(extractItemDetail(item.getItemUrl()));
+            }
+
             itemRepository.saveAll(itemList);
         } catch (Exception e) {
             log.error(e.toString());
-        } finally {
-            // Close the browser after usage
-            driver.quit();
         }
     }
 
-    private Item extractItemDetail(WebElement webElement, String bidId) {
-        Item item = new Item();
-        String itemDetailUrl = webElement.findElement(By.tagName("a")).getAttribute("href");
-        List<WebElement> basicInfo = webElement.findElements(By.tagName("li"));
-        item.setRank(basicInfo.get(0).getText().split("\n")[1]);
-        item.setStartPrice(basicInfo.get(1).getText().split("\n")[1]);
-        item.setAuctionOrder(basicInfo.get(2).getText().split("\n")[1]);
-        item.setItemUrl(itemDetailUrl);
-        item.setTitle(webElement.findElement(By.tagName("b")).getText());
-        System.setProperty("webdriver.chrome.driver", "D:/lib/chromedriver-win64/chromedriver.exe");
-        // Initialize WebDriver with Chrome options
-        ChromeOptions options = new ChromeOptions();
-        WebDriver driver = new ChromeDriver(options);
+
+    private List<String> extractItemDetail(String itemDetailUrl) {
         try {
-            driver.manage().window().setSize(new Dimension(2400, 2000));
             driver.get(itemDetailUrl);
-            // Define the cookies to set (from CakePHP session)
-            Map<String, String> cookies = Map.of(
-                    "CAKEPHP", "ru7ug964i030381l89eoev1u7e"
-            );
-            // Add the cookies to the browser session
-            for (Map.Entry<String, String> entry : cookies.entrySet()) {
-                Cookie cookie = new Cookie(entry.getKey(), entry.getValue());
-                driver.manage().addCookie(cookie);
-            }
-            // After adding cookies, refresh the page to apply the cookies
-            driver.navigate().refresh();
-            // Now that the page is loaded with cookies, you can interact with it
-            // For example, find an element and print its text
             List<WebElement> webElements = driver.findElements(By.className("pc-image-area"));
-            List<String> itemDetailUrls = webElements.subList(0, 2).stream().map(we ->
-                    extractItemDetailUrl(we.getAttribute("style"))
+            return webElements.stream().map(w ->
+                    extractItemDetailUrl(w.getAttribute("style"))
             ).toList();
-            item.setDetailUrls(itemDetailUrls);
-            item.setBidId(bidId);
-            return item;
         } catch (Exception e) {
             log.error(e.toString());
-        } finally {
-            // Close the browser after usage
-            driver.quit();
         }
         return null;
     }
 
+    private String extractItemId(String itemDetailUrl) {
+        Pattern pattern = Pattern.compile("/view/(\\d+)/Auctions");
+        Matcher matcher = pattern.matcher(itemDetailUrl);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return itemDetailUrl;
+    }
+
     private String extractItemDetailUrl(String itemDetailUrl) {
-        String[] splitter = itemDetailUrl.split("\"");
-        if (splitter.length > 1) {
-            int questionMarkIndex = splitter[1].indexOf('?');
-            // If '?' exists, extract the substring before it
-            if (questionMarkIndex != -1) {
-                splitter[1] = splitter[1].substring(0, questionMarkIndex);
+        try {
+            String[] splitter = itemDetailUrl.split("\"");
+            if (splitter.length > 1) {
+                int questionMarkIndex = splitter[1].indexOf('?');
+                // If '?' exists, extract the substring before it
+                if (questionMarkIndex != -1) {
+                    splitter[1] = splitter[1].substring(0, questionMarkIndex);
+                }
+                return splitter[1];
             }
-            return splitter[1];
+        } catch (Exception e) {
+            return "";
         }
         return "";
     }
 
     public int getTotalItem(String clientUrl) {
-        System.setProperty("webdriver.chrome.driver", "D:/lib/chromedriver-win64/chromedriver.exe");
-        // Initialize WebDriver with Chrome options
-        ChromeOptions options = new ChromeOptions();
-        WebDriver driver = new ChromeDriver(options);
         try {
-            driver.manage().window().setSize(new Dimension(2400, 800));
             driver.get(clientUrl);
-            // Define the cookies to set (from CakePHP session)
-            Map<String, String> cookies = Map.of(
-                    "CAKEPHP", "ru7ug964i030381l89eoev1u7e"
-            );
-            // Add the cookies to the browser session
-            for (Map.Entry<String, String> entry : cookies.entrySet()) {
-                Cookie cookie = new Cookie(entry.getKey(), entry.getValue());
-                driver.manage().addCookie(cookie);
-            }
-            // After adding cookies, refresh the page to apply the cookies
-            driver.navigate().refresh();
-            // Now that the page is loaded with cookies, you can interact with it
-            // For example, find an element and print its text
             WebElement e = driver.findElement(By.className("form-control-static"));
-
             return extractTotalItem(e.getText());
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            // Close the browser after usage
-            driver.quit();
+            log.error(e.toString());
+            return 0;
         }
-        return 0;
     }
 
     private int extractTotalItem(String text) {

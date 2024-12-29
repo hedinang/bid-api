@@ -42,4 +42,7 @@ public class Item extends MongoBaseEntity {
 
     @Field(name = "detail_urls")
     private List<String> detailUrls;
+
+    @Field(name = "description")
+    private String description;
 }

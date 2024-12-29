@@ -18,6 +18,6 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<Item> getList(ItemRequest itemRequest) {
-        return itemRepository.getList(itemRequest);
+        return itemRepository.getList(itemRequest).getMappedResults();
     }
 }

@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class ItemRequest {
     String bidId;
     int limit;
-    int skip;
+    int page;
 }

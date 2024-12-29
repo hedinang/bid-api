@@ -16,7 +16,7 @@ import java.util.List;
 public class ItemController {
     private final ItemService itemService;
 
-    @GetMapping("list}")
+    @PostMapping("/list")
     public BaseResponse<List<Item>> list(@RequestBody ItemRequest req) {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", itemService.getList(req));
     }

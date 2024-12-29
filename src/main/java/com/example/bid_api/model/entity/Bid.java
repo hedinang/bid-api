@@ -44,4 +44,7 @@ public class Bid extends MongoBaseEntity {
 
     @Field(name = "cloned")
     private boolean cloned;
+
+    @Field(name = "total_item")
+    private int totalItem;
 }
