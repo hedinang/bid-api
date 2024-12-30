@@ -140,7 +140,7 @@ public class BidServiceImpl implements BidService {
             }
 
             for (Item item : itemList) {
-                item.setDetailUrls(extractItemDetail(item.getItemUrl()));
+                extractItemDetail(item, item.getItemUrl());
             }
 
             itemRepository.saveAll(itemList);
@@ -150,17 +150,37 @@ public class BidServiceImpl implements BidService {
     }
 
 
-    private List<String> extractItemDetail(String itemDetailUrl) {
+    private void extractItemDetail(Item item, String itemDetailUrl) {
         try {
             driver.get(itemDetailUrl);
             List<WebElement> webElements = driver.findElements(By.className("pc-image-area"));
-            return webElements.stream().map(w ->
+            List<String> a = webElements.stream().map(w ->
                     extractItemDetailUrl(w.getAttribute("style"))
             ).toList();
+            item.setDetailUrls(a);
+
+            WebElement itemInfo = driver.findElement(By.className("item-info"));
+            extractItemId(item, itemInfo);
+            extractDescription(item, itemInfo);
         } catch (Exception e) {
             log.error(e.toString());
         }
-        return null;
+    }
+
+    private void extractItemId(Item item, WebElement we) {
+        try {
+            item.setItemId(we.findElement(By.tagName("small")).getText());
+        } catch (Exception e) {
+            log.error(e.toString());
+        }
+    }
+
+    private void extractDescription(Item item, WebElement we) {
+        try {
+            item.setDescription(we.findElements(By.tagName("p")).get(1).getText());
+        } catch (Exception e) {
+            log.error(e.toString());
+        }
     }
 
     private String extractItemId(String itemDetailUrl) {
