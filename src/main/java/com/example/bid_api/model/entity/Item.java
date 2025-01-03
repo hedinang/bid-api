@@ -45,4 +45,10 @@ public class Item extends MongoBaseEntity {
 
     @Field(name = "description")
     private String description;
+
+    @Field(name = "category")
+    private String category;
+
+    @Field(name = "branch")
+    private String branch;
 }

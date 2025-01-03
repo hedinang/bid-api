@@ -5,7 +5,8 @@ FROM khipu/openjdk17-alpine
 WORKDIR /bid-api
 
 # Copy the JAR file into the container
-#COPY jks.jks ssl/jks.jks
+COPY jks.jks ssl/jks.jks
+COPY keystore.p12 ssl/keystore.p12
 COPY target/bid-api-0.0.1-SNAPSHOT.jar target.jar
 
 # Run the JAR file

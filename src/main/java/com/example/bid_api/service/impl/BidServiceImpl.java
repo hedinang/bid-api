@@ -133,6 +133,8 @@ public class BidServiceImpl implements BidService {
                 item.setRank(basicInfo.get(0).getText().split("\n")[1]);
                 item.setStartPrice(basicInfo.get(1).getText().split("\n")[1]);
                 item.setAuctionOrder(basicInfo.get(2).getText().split("\n")[1]);
+
+                item.setBranch(we.findElement(By.tagName("small")).getText());
                 item.setItemUrl(itemDetailUrl);
                 item.setTitle(we.findElement(By.tagName("b")).getText());
                 item.setItemId(extractItemId(itemDetailUrl));
