@@ -9,5 +9,9 @@ public interface BidService {
 
     Bid getBid(String bidId);
 
-    void sync();
+    void stopThread(String threadName);
+
+    void storeBid();
+
+    void syncBid(String bidId);
 }

@@ -11,4 +11,5 @@ public class ItemRequest {
     String bidId;
     int limit;
     int page;
+    String searchBranch;
 }

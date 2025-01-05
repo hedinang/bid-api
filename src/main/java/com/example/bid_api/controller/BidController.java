@@ -25,10 +25,21 @@ public class BidController {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getBid(bidId));
     }
 
-    @PostMapping("sync")
-    public BaseResponse sync() {
-        bidService.sync();
+    @PostMapping("store/bid")
+    public BaseResponse storeBid() {
+        bidService.storeBid();
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
     }
 
+    @PostMapping("sync/{bidId}")
+    public BaseResponse sync(@PathVariable String bidId) {
+        bidService.syncBid(bidId);
+        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
+    }
+
+    @PostMapping("stop/{threadName}")
+    public BaseResponse stopThread(@PathVariable String threadName) {
+        bidService.stopThread(threadName);
+        return new BaseResponse<>(HttpStatus.OK.value(), "stop thread successfully");
+    }
 }
