@@ -12,4 +12,5 @@ public class ItemRequest {
     int limit;
     int page;
     String searchBranch;
+    String searchRank;
 }

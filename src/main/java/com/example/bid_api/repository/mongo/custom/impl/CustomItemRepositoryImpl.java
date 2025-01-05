@@ -24,6 +24,7 @@ public class CustomItemRepositoryImpl implements CustomItemRepository {
         try {
             String matchBidId = String.format("{ $match: {bid_id: '%s' } }", itemRequest.getBidId());
             String matchBranch = null;
+            String matchRank = null;
             String matchLimit = String.format("{ $limit: %s}", itemRequest.getLimit());
             String matchSkip = String.format("{ $skip: %s}", (itemRequest.getPage() - 1) * itemRequest.getLimit());
 
@@ -31,7 +32,11 @@ public class CustomItemRepositoryImpl implements CustomItemRepository {
                 matchBranch = String.format("{ $match: {branch: '%s' } }", itemRequest.getSearchBranch().trim());
             }
 
-            Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(matchBidId, matchBranch, matchSkip, matchLimit));
+            if (itemRequest.getSearchRank() != null && !itemRequest.getSearchRank().trim().isEmpty()) {
+                matchRank = String.format("{ $match: {rank: '%s' } }", itemRequest.getSearchRank().trim());
+            }
+
+            Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(matchBidId, matchBranch, matchRank, matchSkip, matchLimit));
             return mongoTemplate.aggregate(aggregation, "item", Item.class);
         } catch (Exception e) {
             log.error("getList CustomTaskRepositoryImpl error : {}", e.getMessage());
