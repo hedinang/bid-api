@@ -10,9 +10,12 @@ import com.example.bid_api.util.date.DateUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
@@ -31,6 +34,9 @@ public class BidServiceImpl implements BidService {
     private final ItemRepository itemRepository;
     private final Map<String, Thread> threadMap = new HashMap<>();
     private WebDriver driver;
+
+    @Value("${chrome-driver}")
+    String chromeDriver;
 
     @Override
     public List<Bid> getList() {
@@ -54,14 +60,14 @@ public class BidServiceImpl implements BidService {
 //            try {
 //                while (!Thread.currentThread().isInterrupted()) {
 //                    try {
-//                        System.setProperty("webdriver.chrome.driver", "D:/lib/chromedriver-win64/chromedriver.exe");
+//                        System.setProperty("webdriver.chrome.driver", chromeDriver);
 //                        String clientUrl = "https://www.ecoauc.com/client";
 //                        // Initialize WebDriver with Chrome options
 //                        ChromeOptions options = new ChromeOptions();
 //                        driver = new ChromeDriver(options);
 //                        driver.manage().window().setSize(new Dimension(2400, 2000));
 //                        driver.get(clientUrl);
-//                        driver.manage().addCookie(new Cookie("CAKEPHP", "gvgrcod169roq0uq5an001c5vk"));
+//                        driver.manage().addCookie(new Cookie("CAKEPHP", getToken());
 //                        driver.get(clientUrl);
 //                        List<WebElement> webElements = driver.findElements(By.className("slick-slide"));
 //                        List<Bid> bids = new ArrayList<>();
@@ -144,14 +150,16 @@ public class BidServiceImpl implements BidService {
     @Transactional
     public void storeBid() {
         try {
-            System.setProperty("webdriver.chrome.driver", "D:/lib/chromedriver-win64/chromedriver.exe");
+            System.setProperty("webdriver.chrome.driver", chromeDriver);
             String clientUrl = "https://www.ecoauc.com/client";
             // Initialize WebDriver with Chrome options
             ChromeOptions options = new ChromeOptions();
+            options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
+            options.addArguments("--disable-gpu", "--remote-allow-origins=*");
             driver = new ChromeDriver(options);
             driver.manage().window().setSize(new Dimension(2400, 2000));
             driver.get(clientUrl);
-            driver.manage().addCookie(new Cookie("CAKEPHP", "gvgrcod169roq0uq5an001c5vk"));
+            driver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
             driver.get(clientUrl);
             List<WebElement> webElements = driver.findElements(By.className("slick-slide"));
             List<Bid> bids = new ArrayList<>();
@@ -250,13 +258,15 @@ public class BidServiceImpl implements BidService {
                     int pages = (int) Math.ceil((double) totalItem / 50);
                     if (bid.getDonePage() == pages) return;
 
-                    System.setProperty("webdriver.chrome.driver", "D:/lib/chromedriver-win64/chromedriver.exe");
+                    System.setProperty("webdriver.chrome.driver", chromeDriver);
                     // Initialize WebDriver with Chrome options
                     ChromeOptions options = new ChromeOptions();
+                    options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
+                    options.addArguments("--disable-gpu", "--remote-allow-origins=*");
                     driver = new ChromeDriver(options);
                     driver.manage().window().setSize(new Dimension(2400, 9000));
                     driver.get("https://www.ecoauc.com/client");
-                    driver.manage().addCookie(new Cookie("CAKEPHP", "gvgrcod169roq0uq5an001c5vk"));
+                    driver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
                     for (int i = bid.getDonePage() + 1; i < pages + 1; i++) {
                         syncItem(bid.getDetailUrl(), i + 1, bid);
                     }
@@ -454,5 +464,25 @@ public class BidServiceImpl implements BidService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private String getToken() {
+        try {
+            String loginUrl = "https://www.ecoauc.com/client/users/post-sign-in";
+            Connection.Response loginResponse = Jsoup.connect(loginUrl)
+                    .cookie("csrfToken", "bfb9dce0e28af1531cee77027f2d6c6ef072ad499ceccac44484b24909cfa94688723585a66072a423b18a7f8c3beb023400032fb7dad89ffc32d13f842ab14b")
+                    .data("_csrfToken", "bfb9dce0e28af1531cee77027f2d6c6ef072ad499ceccac44484b24909cfa94688723585a66072a423b18a7f8c3beb023400032fb7dad89ffc32d13f842ab14b")
+                    .data("email_address", "gavip13051995@gmail.com")
+                    .data("password", "Tungduong2024")
+                    .data("remember-me", "remember-me")
+                    .method(Connection.Method.POST)
+                    .execute();
+
+            Map<String, String> cookies = loginResponse.cookies();
+            return cookies.get("CAKEPHP");
+        } catch (Exception ex) {
+            log.error(ex.toString());
+        }
+        return "rrb8pmigiak49frf1j2n15rqqa";
     }
 }
