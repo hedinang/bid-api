@@ -1,6 +1,8 @@
 package com.example.bid_api.controller;
 
 import com.example.bid_api.model.entity.Bid;
+import com.example.bid_api.model.request.BidRequest;
+import com.example.bid_api.model.request.ThreadStopRequest;
 import com.example.bid_api.service.BidService;
 import com.example.bid_api.util.response.BaseResponse;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/bid")
@@ -20,9 +23,9 @@ public class BidController {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getList());
     }
 
-    @GetMapping("/{bidId}")
-    public BaseResponse<Bid> get(@PathVariable String bidId) {
-        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getBid(bidId));
+    @PostMapping("/{bidId}")
+    public BaseResponse<Bid> get(@RequestBody BidRequest bidRequest) {
+        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getBid(bidRequest));
     }
 
     @PostMapping("store/bid")
@@ -31,15 +34,21 @@ public class BidController {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
     }
 
-    @PostMapping("sync/{bidId}")
-    public BaseResponse sync(@PathVariable String bidId) {
-        bidService.syncBid(bidId);
+    @PostMapping("sync")
+    public BaseResponse sync(@RequestBody BidRequest bidRequest) {
+        bidService.syncBid(bidRequest);
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
     }
 
     @PostMapping("stop/{threadName}")
-    public BaseResponse stopThread(@PathVariable String threadName) {
-        bidService.stopThread(threadName);
+    public BaseResponse stopThread(@RequestBody ThreadStopRequest request) {
+        bidService.stopThread(request.getThreadName());
         return new BaseResponse<>(HttpStatus.OK.value(), "stop thread successfully");
+    }
+
+    @PostMapping("thread/list")
+    public BaseResponse<Set<String>> listThread() {
+        bidService.getList();
+        return new BaseResponse<>(HttpStatus.OK.value(), "get thread list successfully", bidService.listThread());
     }
 }

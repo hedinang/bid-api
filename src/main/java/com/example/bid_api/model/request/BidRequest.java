@@ -7,11 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ItemRequest {
+public class BidRequest {
     String bidId;
     String bidStatus;
-    int limit;
-    int page;
-    String searchBranch;
-    String searchRank;
 }

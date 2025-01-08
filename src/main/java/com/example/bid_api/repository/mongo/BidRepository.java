@@ -12,7 +12,7 @@ public interface BidRepository extends MongoRepository<Bid, String> {
 
     List<Bid> findByClosedAndBidIdNotIn(boolean closed, List<String> bidIds);
 
-    Bid findByBidId(String bid);
+    Bid findByBidIdAndBidStatus(String bidId, String bidStatus);
 
     void deleteByDetailUrlNotIn(List<String> detailUrls);
 }

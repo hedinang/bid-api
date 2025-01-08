@@ -2,6 +2,7 @@ package com.example.bid_api.service.impl;
 
 import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.entity.Item;
+import com.example.bid_api.model.request.BidRequest;
 import com.example.bid_api.repository.mongo.BidRepository;
 import com.example.bid_api.repository.mongo.ItemRepository;
 import com.example.bid_api.service.BidService;
@@ -19,10 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,8 +42,8 @@ public class BidServiceImpl implements BidService {
     }
 
     @Override
-    public Bid getBid(String bidId) {
-        return bidRepository.findByBidId(bidId);
+    public Bid getBid(BidRequest bidRequest) {
+        return bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
     }
 
 //    @Override
@@ -241,47 +239,58 @@ public class BidServiceImpl implements BidService {
         }
     }
 
-    public void syncBid(String bidId) {
-        if (threadMap.containsKey("bid-" + bidId)) {
+    public void syncBid(BidRequest bidRequest) {
+        if (threadMap.containsKey("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus())) {
             System.out.println("bid getting is already running.");
             return;
         }
 
         Thread thread = new Thread(() -> {
-            try {
-                while (!Thread.currentThread().isInterrupted()) {
-                    Bid bid = bidRepository.findByBidId(bidId);
-                    bid.setSynchronizing(true);
-                    bidRepository.save(bid);
-                    int totalItem = bid.getTotalItem();
-                    if (totalItem == 0) return;
-                    int pages = (int) Math.ceil((double) totalItem / 50);
-                    if (bid.getDonePage() == pages) return;
-
-                    System.setProperty("webdriver.chrome.driver", chromeDriver);
-                    // Initialize WebDriver with Chrome options
-                    ChromeOptions options = new ChromeOptions();
-                    options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
-                    options.addArguments("--disable-gpu", "--remote-allow-origins=*");
-                    driver = new ChromeDriver(options);
-                    driver.manage().window().setSize(new Dimension(2400, 9000));
-                    driver.get("https://www.ecoauc.com/client");
-                    driver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
-                    for (int i = bid.getDonePage() + 1; i < pages + 1; i++) {
-                        syncItem(bid.getDetailUrl(), i + 1, bid);
-                    }
-                    driver.quit();
-                    log.info("Sync complete bid: {}", bidId);
-                    Thread.sleep(1000); // Simulate work
+            while (!Thread.currentThread().isInterrupted()) {
+                Bid bid = bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
+                bid.setSynchronizing(true);
+                bidRepository.save(bid);
+                int totalItem = bid.getTotalItem();
+                if (totalItem == 0) {
+                    stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
+                    return;
                 }
-            } catch (InterruptedException e) {
-                log.error("bid getting was interrupted.");
+                int pages = (int) Math.ceil((double) totalItem / 50);
+                if (bid.getDonePage() > pages) {
+                    stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
+                    return;
+                }
+
+                System.setProperty("webdriver.chrome.driver", chromeDriver);
+                // Initialize WebDriver with Chrome options
+                ChromeOptions options = new ChromeOptions();
+//                    options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
+//                    options.addArguments("--disable-gpu", "--remote-allow-origins=*");
+                driver = new ChromeDriver(options);
+                driver.manage().window().setSize(new Dimension(2400, 9000));
+                driver.get("https://www.ecoauc.com/client");
+                driver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
+                for (int i = bid.getDonePage() + 1; i < pages + 2; i++) {
+                    syncItem(bid.getDetailUrl(), i + 1, bid);
+                }
+                driver.quit();
+                log.info("Sync complete bid: {}-{}", bidRequest.getBidId(), bidRequest.getBidStatus());
+
+                Bid syncBid = bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
+                syncBid.setSynchronizing(false);
+                bidRepository.save(bid);
+                stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
+                return;
             }
         });
 
-        thread.setName("bid-" + bidId);
-        threadMap.put("bid-" + bidId, thread);
+        thread.setName("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
+        threadMap.put("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus(), thread);
         thread.start();
+    }
+
+    public Set<String> listThread(){
+        return threadMap.keySet();
     }
 
     private void syncItem(String clientUrl, int page, Bid bid) {
@@ -292,6 +301,8 @@ public class BidServiceImpl implements BidService {
             for (WebElement we : webElements) {
                 Item item = new Item();
                 item.setBidId(bid.getBidId());
+                item.setBidStatus(bid.getBidStatus());
+
                 String itemDetailUrl = we.findElement(By.tagName("a")).getAttribute("href");
                 List<WebElement> basicInfo = we.findElements(By.tagName("li"));
                 item.setRank(basicInfo.get(0).getText().split("\n")[1]);
@@ -313,7 +324,6 @@ public class BidServiceImpl implements BidService {
             List<Item> newItems = itemList.stream().filter(i -> !existedItemIds.contains(i.getItemId())).toList();
             itemRepository.saveAll(newItems);
             bid.setDonePage(page);
-            bid.setSynchronizing(false);
             bidRepository.save(bid);
         } catch (Exception e) {
             log.error(e.toString());

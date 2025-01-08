@@ -7,11 +7,6 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ItemRequest {
-    String bidId;
-    String bidStatus;
-    int limit;
-    int page;
-    String searchBranch;
-    String searchRank;
+public class ThreadStopRequest {
+    String threadName;
 }

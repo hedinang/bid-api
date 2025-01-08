@@ -25,6 +25,9 @@ public class Item extends MongoBaseEntity {
     @Field(name = "bid_id")
     private String bidId;
 
+    @Field(name = "bid_status")
+    private String bidStatus;
+
     @Field(name = "title")
     private String title;
 
