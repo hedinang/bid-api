@@ -17,9 +17,12 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -264,8 +267,8 @@ public class BidServiceImpl implements BidService {
                 System.setProperty("webdriver.chrome.driver", chromeDriver);
                 // Initialize WebDriver with Chrome options
                 ChromeOptions options = new ChromeOptions();
-//                    options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
-//                    options.addArguments("--disable-gpu", "--remote-allow-origins=*");
+                options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
+                options.addArguments("--disable-gpu", "--remote-allow-origins=*");
                 driver = new ChromeDriver(options);
                 driver.manage().window().setSize(new Dimension(2400, 9000));
                 driver.get("https://www.ecoauc.com/client");
@@ -289,7 +292,7 @@ public class BidServiceImpl implements BidService {
         thread.start();
     }
 
-    public Set<String> listThread(){
+    public Set<String> listThread() {
         return threadMap.keySet();
     }
 
@@ -494,5 +497,22 @@ public class BidServiceImpl implements BidService {
             log.error(ex.toString());
         }
         return "rrb8pmigiak49frf1j2n15rqqa";
+    }
+
+    // delete expired bid
+    @Scheduled(cron = "0 0 23 * * ?") // Executes every 5 seconds
+    public void closeExpiredBid() {
+        log.info("start to clean expired bid");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss yyyy-MM-dd");
+        List<Bid> bids = bidRepository.findByClosed(false);
+        List<Bid> expiredBids = bids.stream().filter(bid -> {
+            LocalDateTime openTime = LocalDateTime.parse(bid.getOpenTime(), formatter);
+            // Compare with the current time
+            return openTime.isBefore(LocalDateTime.now());
+        }).map(bid -> {
+            bid.setClosed(true);
+            return bid;
+        }).toList();
+        bidRepository.saveAll(expiredBids);
     }
 }

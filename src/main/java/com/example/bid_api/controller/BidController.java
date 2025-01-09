@@ -40,7 +40,7 @@ public class BidController {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
     }
 
-    @PostMapping("stop/{threadName}")
+    @PostMapping("stop")
     public BaseResponse stopThread(@RequestBody ThreadStopRequest request) {
         bidService.stopThread(request.getThreadName());
         return new BaseResponse<>(HttpStatus.OK.value(), "stop thread successfully");
