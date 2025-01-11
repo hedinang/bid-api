@@ -169,7 +169,7 @@ public class BidServiceImpl implements BidService {
                 if (extractDateTime(webElement) == null) continue;
                 Bid bid = new Bid();
                 bid.setBidStatus(extractBidStatus(webElement));
-                bid.setHeaderIcon(extractIconUrl(webElement));
+//                bid.setHeaderIcon(extractIconUrl(webElement));
                 bid.setTimeStatus(extractTimeStatus(webElement));
                 String detailUrl = extractDetailUrl(webElement);
                 String startPreviewTime = extractStartTime(webElement);
@@ -511,8 +511,11 @@ public class BidServiceImpl implements BidService {
             return openTime.isBefore(LocalDateTime.now());
         }).map(bid -> {
             bid.setClosed(true);
+            stopThread(bid.getBidId() + "-" + bid.getBidStatus());
             return bid;
         }).toList();
         bidRepository.saveAll(expiredBids);
+        // clear running thread belong to expired bids
+        storeBid();
     }
 }
