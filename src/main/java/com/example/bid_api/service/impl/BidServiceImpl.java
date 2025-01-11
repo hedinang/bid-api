@@ -34,7 +34,8 @@ public class BidServiceImpl implements BidService {
     private final BidRepository bidRepository;
     private final ItemRepository itemRepository;
     private final Map<String, Thread> threadMap = new HashMap<>();
-    private WebDriver driver;
+    private WebDriver bidDriver = null;
+    private WebDriver itemDriver = null;
 
     @Value("${chrome-driver}")
     String chromeDriver;
@@ -157,12 +158,12 @@ public class BidServiceImpl implements BidService {
             ChromeOptions options = new ChromeOptions();
             options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
             options.addArguments("--disable-gpu", "--remote-allow-origins=*");
-            driver = new ChromeDriver(options);
-            driver.manage().window().setSize(new Dimension(2400, 2000));
-            driver.get(clientUrl);
-            driver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
-            driver.get(clientUrl);
-            List<WebElement> webElements = driver.findElements(By.className("slick-slide"));
+            bidDriver = new ChromeDriver(options);
+            bidDriver.manage().window().setSize(new Dimension(2400, 2000));
+            bidDriver.get(clientUrl);
+            bidDriver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
+            bidDriver.get(clientUrl);
+            List<WebElement> webElements = bidDriver.findElements(By.className("slick-slide"));
             List<Bid> bids = new ArrayList<>();
 
             for (WebElement webElement : webElements) {
@@ -225,7 +226,7 @@ public class BidServiceImpl implements BidService {
             log.error(e.toString());
         }
 
-        driver.quit();
+        bidDriver.quit();
         log.info("Get and store successfully bid");
     }
 
@@ -269,14 +270,14 @@ public class BidServiceImpl implements BidService {
                 ChromeOptions options = new ChromeOptions();
                 options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
                 options.addArguments("--disable-gpu", "--remote-allow-origins=*");
-                driver = new ChromeDriver(options);
-                driver.manage().window().setSize(new Dimension(2400, 9000));
-                driver.get("https://www.ecoauc.com/client");
-                driver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
+                itemDriver = new ChromeDriver(options);
+                itemDriver.manage().window().setSize(new Dimension(2400, 9000));
+                itemDriver.get("https://www.ecoauc.com/client");
+                itemDriver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
                 for (int i = bid.getDonePage() + 1; i < pages + 2; i++) {
                     syncItem(bid.getDetailUrl(), i + 1, bid);
                 }
-                driver.quit();
+                itemDriver.quit();
                 log.info("Sync complete bid: {}-{}", bidRequest.getBidId(), bidRequest.getBidStatus());
 
                 Bid syncBid = bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
@@ -298,8 +299,8 @@ public class BidServiceImpl implements BidService {
 
     private void syncItem(String clientUrl, int page, Bid bid) {
         try {
-            driver.get(clientUrl + "&page=" + page);
-            List<WebElement> webElements = driver.findElements(By.className("card"));
+            itemDriver.get(clientUrl + "&page=" + page);
+            List<WebElement> webElements = itemDriver.findElements(By.className("card"));
             List<Item> itemList = new ArrayList<>();
             for (WebElement we : webElements) {
                 Item item = new Item();
@@ -337,12 +338,12 @@ public class BidServiceImpl implements BidService {
 
     private void extractItemDetail(Item item, String itemDetailUrl) {
         try {
-            driver.get(itemDetailUrl);
-            List<WebElement> webElements = driver.findElements(By.className("pc-image-area"));
+            itemDriver.get(itemDetailUrl);
+            List<WebElement> webElements = itemDriver.findElements(By.className("pc-image-area"));
             List<String> a = webElements.stream().map(w -> extractItemDetailUrl(w.getAttribute("style"))).toList();
             item.setDetailUrls(a);
 
-            WebElement itemInfo = driver.findElement(By.className("item-info"));
+            WebElement itemInfo = itemDriver.findElement(By.className("item-info"));
             extractItemId(item, itemInfo);
             extractDescription(item, itemInfo);
         } catch (Exception e) {
@@ -394,8 +395,8 @@ public class BidServiceImpl implements BidService {
 
     public int getTotalItem(String clientUrl) {
         try {
-            driver.get(clientUrl);
-            WebElement e = driver.findElement(By.className("form-control-static"));
+            itemDriver.get(clientUrl);
+            WebElement e = itemDriver.findElement(By.className("form-control-static"));
             return extractTotalItem(e.getText());
         } catch (Exception e) {
             log.error(e.toString());
