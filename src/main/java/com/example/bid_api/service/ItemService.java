@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface ItemService {
     List<Item> getList(ItemRequest itemRequest);
+
+    Item getDetail(String itemId);
 }

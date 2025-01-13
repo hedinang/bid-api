@@ -20,4 +20,9 @@ public class ItemController {
     public BaseResponse<List<Item>> list(@RequestBody ItemRequest req) {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", itemService.getList(req));
     }
+
+    @GetMapping("/detail/{itemId}")
+    public BaseResponse<Item> list(@PathVariable("itemId") String itemId) {
+        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", itemService.getDetail(itemId));
+    }
 }

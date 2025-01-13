@@ -20,4 +20,9 @@ public class ItemServiceImpl implements ItemService {
     public List<Item> getList(ItemRequest itemRequest) {
         return itemRepository.getList(itemRequest).getMappedResults();
     }
+
+    @Override
+    public Item getDetail(String itemId) {
+        return itemRepository.findByItemId(itemId);
+    }
 }
