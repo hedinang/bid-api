@@ -346,6 +346,7 @@ public class BidServiceImpl implements BidService {
             WebElement itemInfo = itemDriver.findElement(By.className("item-info"));
             extractItemId(item, itemInfo);
             extractDescription(item, itemInfo);
+            extractItemCategory(item, itemInfo);
         } catch (Exception e) {
             log.error(e.toString());
         }
@@ -354,6 +355,16 @@ public class BidServiceImpl implements BidService {
     private void extractItemId(Item item, WebElement we) {
         try {
             item.setItemId(we.findElement(By.tagName("small")).getText());
+        } catch (Exception e) {
+            log.error(e.toString());
+        }
+    }
+
+    private void extractItemCategory(Item item, WebElement we) {
+        try {
+            WebElement infoDetails = we.findElement(By.className("dl-horizontal"));
+            List<WebElement> paramList = infoDetails.findElements(By.tagName("dd"));
+            item.setCategory(paramList.get(5).getText());
         } catch (Exception e) {
             log.error(e.toString());
         }
@@ -395,8 +406,8 @@ public class BidServiceImpl implements BidService {
 
     public int getTotalItem(String clientUrl) {
         try {
-            itemDriver.get(clientUrl);
-            WebElement e = itemDriver.findElement(By.className("form-control-static"));
+            bidDriver.get(clientUrl);
+            WebElement e = bidDriver.findElement(By.className("form-control-static"));
             return extractTotalItem(e.getText());
         } catch (Exception e) {
             log.error(e.toString());
@@ -501,22 +512,37 @@ public class BidServiceImpl implements BidService {
     }
 
     // delete expired bid
-    @Scheduled(cron = "0 0 23 * * ?") // Executes every 5 seconds
+    @Scheduled(cron = "0 0 22 * * ?") // Executes every 5 seconds
     public void closeExpiredBid() {
-        log.info("start to clean expired bid");
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss yyyy-MM-dd");
-        List<Bid> bids = bidRepository.findByClosed(false);
-        List<Bid> expiredBids = bids.stream().filter(bid -> {
-            LocalDateTime openTime = LocalDateTime.parse(bid.getOpenTime(), formatter);
-            // Compare with the current time
-            return openTime.isBefore(LocalDateTime.now());
-        }).map(bid -> {
-            bid.setClosed(true);
-            stopThread(bid.getBidId() + "-" + bid.getBidStatus());
-            return bid;
-        }).toList();
-        bidRepository.saveAll(expiredBids);
-        // clear running thread belong to expired bids
-        storeBid();
+        if (threadMap.containsKey("sync-bid")) {
+            System.out.println("bid getting is already running.");
+            return;
+        }
+
+        Thread thread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                log.info("start to clean expired bid");
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss yyyy-MM-dd");
+                List<Bid> bids = bidRepository.findByClosed(false);
+                List<Bid> expiredBids = bids.stream().filter(bid -> {
+                    LocalDateTime openTime = LocalDateTime.parse(bid.getOpenTime(), formatter);
+                    // Compare with the current time
+                    return openTime.isBefore(LocalDateTime.now());
+                }).map(bid -> {
+                    bid.setClosed(true);
+                    stopThread(bid.getBidId() + "-" + bid.getBidStatus());
+                    return bid;
+                }).toList();
+                bidRepository.saveAll(expiredBids);
+                // clear running thread belong to expired bids
+                storeBid();
+                stopThread("sync-bid");
+                return;
+            }
+        });
+
+        thread.setName("sync-bid");
+        threadMap.put("sync-bid", thread);
+        thread.start();
     }
 }
