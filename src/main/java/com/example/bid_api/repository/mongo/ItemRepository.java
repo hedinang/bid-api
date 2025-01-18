@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface ItemRepository extends MongoRepository<Item, String>, CustomItemRepository {
     List<Item> findByBidIdIn(List<String> bidIds);
-    Item findByItemId(String itemId);
+    List<Item> findByItemId(String itemId);
 }
 

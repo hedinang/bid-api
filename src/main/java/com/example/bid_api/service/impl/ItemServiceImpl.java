@@ -23,6 +23,8 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public Item getDetail(String itemId) {
-        return itemRepository.findByItemId(itemId);
+        List<Item> itemList = itemRepository.findByItemId(itemId);
+        if (itemList.isEmpty()) return null;
+        return itemList.get(0);
     }
 }
