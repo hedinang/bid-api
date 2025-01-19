@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/bid")
+@RequestMapping("/public/bid")
 @RequiredArgsConstructor
 public class BidController {
     private final BidService bidService;
