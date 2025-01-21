@@ -34,6 +34,7 @@ public class BidServiceImpl implements BidService {
     private final BidRepository bidRepository;
     private final ItemRepository itemRepository;
     private final Map<String, Thread> threadMap = new HashMap<>();
+//    Proxy proxy = new Proxy();
     private WebDriver bidDriver = null;
     private WebDriver itemDriver = null;
 
@@ -158,6 +159,10 @@ public class BidServiceImpl implements BidService {
             ChromeOptions options = new ChromeOptions();
             options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
             options.addArguments("--disable-gpu", "--remote-allow-origins=*");
+//            proxy.setSocksProxy("127.0.0.1:9050");
+//            proxy.setSocksVersion(5);
+//            options.setProxy(proxy);
+
             bidDriver = new ChromeDriver(options);
             bidDriver.manage().window().setSize(new Dimension(2400, 2000));
             bidDriver.get(clientUrl);
@@ -270,10 +275,17 @@ public class BidServiceImpl implements BidService {
                 ChromeOptions options = new ChromeOptions();
                 options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
                 options.addArguments("--disable-gpu", "--remote-allow-origins=*");
+//                proxy.setSocksProxy("127.0.0.1:9050");
+//                proxy.setSocksVersion(5);
+//                options.setProxy(proxy);
+
                 itemDriver = new ChromeDriver(options);
                 itemDriver.manage().window().setSize(new Dimension(2400, 9000));
                 itemDriver.get("https://www.ecoauc.com/client");
-                itemDriver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
+                String tk = getToken();
+                itemDriver.manage().addCookie(new Cookie("CAKEPHP", tk));
+                log.info("Start sync bid: {}-{}", bidRequest.getBidId(), bidRequest.getBidStatus());
+
                 for (int i = bid.getDonePage() + 1; i < pages + 2; i++) {
                     syncItem(bid.getDetailUrl(), i + 1, bid);
                 }
@@ -300,6 +312,8 @@ public class BidServiceImpl implements BidService {
     private void syncItem(String clientUrl, int page, Bid bid) {
         try {
             itemDriver.get(clientUrl + "&page=" + page);
+            log.info("Start extract: {}-{}-{}", bid.getBidId(), bid.getBidStatus(), page);
+
             List<WebElement> webElements = itemDriver.findElements(By.className("card"));
             List<Item> itemList = new ArrayList<>();
             for (WebElement we : webElements) {
