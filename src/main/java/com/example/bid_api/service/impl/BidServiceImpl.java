@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +35,7 @@ public class BidServiceImpl implements BidService {
     private final BidRepository bidRepository;
     private final ItemRepository itemRepository;
     private final Map<String, Thread> threadMap = new HashMap<>();
-//    Proxy proxy = new Proxy();
+    //    Proxy proxy = new Proxy();
     private WebDriver bidDriver = null;
     private WebDriver itemDriver = null;
 
@@ -159,6 +160,7 @@ public class BidServiceImpl implements BidService {
             ChromeOptions options = new ChromeOptions();
             options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
             options.addArguments("--disable-gpu", "--remote-allow-origins=*");
+            options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
 //            proxy.setSocksProxy("127.0.0.1:9050");
 //            proxy.setSocksVersion(5);
 //            options.setProxy(proxy);
@@ -210,23 +212,28 @@ public class BidServiceImpl implements BidService {
             }
 
             List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
+            Map<String, Bid> existedMap = existedBids.stream().collect(Collectors.toMap(Bid::getDetailUrl, bid -> bid, (a, b) -> a));
+
             List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
             List<String> bidIds = bids.stream().map(Bid::getBidId).toList();
             List<Bid> closedBids = bidRepository.findByClosedAndBidIdNotIn(false, bidIds);
             closedBids.forEach(closedBid -> closedBid.setClosed(true));
-            bidRepository.saveAll(closedBids);
 
-            List<Bid> newBids = bids.stream().filter(bid -> !existedDetailUrls.contains(bid.getDetailUrl())).toList();
+            List<Bid> needingStoreBids = new ArrayList<>(bids.stream().map(bid -> {
+                int totalItem = getTotalItem(bid.getDetailUrl());
 
-            if (newBids.isEmpty()) {
-                return;
-            }
+                if (existedDetailUrls.contains(bid.getDetailUrl())) {
+                    Bid existedBid = existedMap.get(bid.getDetailUrl());
+                    existedBid.setTotalItem(totalItem);
+                    return existedBid;
+                }
 
-            for (Bid newBid : newBids) {
-                int totalItem = getTotalItem(newBid.getDetailUrl());
-                newBid.setTotalItem(totalItem);
-            }
-            bidRepository.saveAll(newBids);
+                bid.setTotalItem(totalItem);
+                return bid;
+            }).toList());
+
+            needingStoreBids.addAll(closedBids);
+            bidRepository.saveAll(needingStoreBids);
         } catch (Exception e) {
             log.error(e.toString());
         }
@@ -275,6 +282,7 @@ public class BidServiceImpl implements BidService {
                 ChromeOptions options = new ChromeOptions();
                 options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
                 options.addArguments("--disable-gpu", "--remote-allow-origins=*");
+                options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
 //                proxy.setSocksProxy("127.0.0.1:9050");
 //                proxy.setSocksVersion(5);
 //                options.setProxy(proxy);
@@ -526,7 +534,7 @@ public class BidServiceImpl implements BidService {
     }
 
     // delete expired bid
-    @Scheduled(cron = "0 0 22 * * ?") // Executes every 5 seconds
+//    @Scheduled(cron = "0 50 21 * * ?") // Executes every 5 seconds
     public void closeExpiredBid() {
         if (threadMap.containsKey("sync-bid")) {
             System.out.println("bid getting is already running.");
