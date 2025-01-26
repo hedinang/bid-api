@@ -2,6 +2,7 @@ package com.example.bid_api.service;
 
 import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.request.BidRequest;
+import com.example.bid_api.model.request.DeleteBidRequest;
 
 import java.util.List;
 import java.util.Set;
@@ -18,4 +19,6 @@ public interface BidService {
     void syncBid(BidRequest bidRequest);
 
     Set<String> listThread();
+
+    void deleteBid(DeleteBidRequest deleteBidRequest);
 }

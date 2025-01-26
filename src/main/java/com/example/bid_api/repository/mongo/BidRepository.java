@@ -15,4 +15,6 @@ public interface BidRepository extends MongoRepository<Bid, String> {
     Bid findByBidIdAndBidStatus(String bidId, String bidStatus);
 
     void deleteByDetailUrlNotIn(List<String> detailUrls);
+
+    void deleteByUniqueId(String uniqueId);
 }

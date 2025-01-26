@@ -18,8 +18,9 @@ public class Bid extends MongoBaseEntity {
     @MongoId
     private ObjectId id;
     @Indexed(unique = true)
+    @Field(name = "unique_id")
+    private String uniqueId = StringUtil.generateId();
     @Field(name = "bid_id")
-//    private String bidId = StringUtil.generateId();
     private String bidId;
     @Field(name = "detail_url")
     private String detailUrl;

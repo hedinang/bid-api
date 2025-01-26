@@ -3,6 +3,7 @@ package com.example.bid_api.service.impl;
 import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.entity.Item;
 import com.example.bid_api.model.request.BidRequest;
+import com.example.bid_api.model.request.DeleteBidRequest;
 import com.example.bid_api.repository.mongo.BidRepository;
 import com.example.bid_api.repository.mongo.ItemRepository;
 import com.example.bid_api.service.BidService;
@@ -566,5 +567,10 @@ public class BidServiceImpl implements BidService {
         thread.setName("sync-bid");
         threadMap.put("sync-bid", thread);
         thread.start();
+    }
+
+    @Override
+    public void deleteBid(DeleteBidRequest deleteBidRequest) {
+        bidRepository.deleteByUniqueId(deleteBidRequest.getUniqueId());
     }
 }
