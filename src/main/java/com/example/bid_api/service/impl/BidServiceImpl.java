@@ -177,10 +177,15 @@ public class BidServiceImpl implements BidService {
             for (WebElement webElement : webElements) {
                 if (extractDateTime(webElement) == null) continue;
                 Bid bid = new Bid();
+                String detailUrl = extractDetailUrl(webElement);
+
+                if (detailUrl == null || detailUrl.isEmpty() || detailUrl.equals("https://www.ecoauc.com/client")) {
+                    continue;
+                }
+
                 bid.setBidStatus(extractBidStatus(webElement));
 //                bid.setHeaderIcon(extractIconUrl(webElement));
                 bid.setTimeStatus(extractTimeStatus(webElement));
-                String detailUrl = extractDetailUrl(webElement);
                 String startPreviewTime = extractStartTime(webElement);
                 String endPreviewTime = extractEndTime(webElement);
                 String openDate = extractDateTime(webElement);
