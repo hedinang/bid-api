@@ -190,6 +190,10 @@ public class BidServiceImpl implements BidService {
                 String endPreviewTime = extractEndTime(webElement);
                 String openDate = extractDateTime(webElement);
 
+                if (openDate == null || openDate.isEmpty()) {
+                    continue;
+                }
+
                 URL url = new URL(detailUrl);
                 String query = url.getQuery();
                 Map<String, String> queryParams = StringUtil.getQueryParams(query);
@@ -235,6 +239,9 @@ public class BidServiceImpl implements BidService {
                 }
 
                 bid.setTotalItem(totalItem);
+
+                int pages = (int) Math.ceil((double) totalItem / 50);
+                bid.setDonePage(pages);
                 return bid;
             }).toList());
 
@@ -277,8 +284,8 @@ public class BidServiceImpl implements BidService {
                     stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
                     return;
                 }
-                int pages = (int) Math.ceil((double) totalItem / 50);
-                if (bid.getDonePage() > pages) {
+//                int pages = (int) Math.ceil((double) totalItem / 50);
+                if (bid.getDonePage() == 0) {
                     stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
                     return;
                 }
@@ -300,8 +307,8 @@ public class BidServiceImpl implements BidService {
                 itemDriver.manage().addCookie(new Cookie("CAKEPHP", tk));
                 log.info("Start sync bid: {}-{}", bidRequest.getBidId(), bidRequest.getBidStatus());
 
-                for (int i = bid.getDonePage() + 1; i < pages + 2; i++) {
-                    syncItem(bid.getDetailUrl(), i + 1, bid);
+                for (int i = bid.getDonePage(); i > 0; i--) {
+                    syncItem(bid.getDetailUrl(), i, bid);
                 }
                 itemDriver.quit();
                 log.info("Sync complete bid: {}-{}", bidRequest.getBidId(), bidRequest.getBidStatus());
@@ -355,7 +362,7 @@ public class BidServiceImpl implements BidService {
             List<String> existedItemIds = itemRepository.findByBidIdIn(itemList.stream().map(Item::getBidId).toList()).stream().map(Item::getBidId).toList();
             List<Item> newItems = itemList.stream().filter(i -> !existedItemIds.contains(i.getItemId())).toList();
             itemRepository.saveAll(newItems);
-            bid.setDonePage(page);
+            bid.setDonePage(page - 1);
             bidRepository.save(bid);
         } catch (Exception e) {
             log.error(e.toString());
