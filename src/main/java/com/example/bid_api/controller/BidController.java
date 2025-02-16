@@ -14,17 +14,17 @@ import java.util.List;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/public/bid")
+@RequestMapping("/api/bid")
 @RequiredArgsConstructor
 public class BidController {
     private final BidService bidService;
 
-    @GetMapping("list")
+    @GetMapping("/public/list")
     public BaseResponse<List<Bid>> list() {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getList());
     }
 
-    @PostMapping("/{bidId}")
+    @PostMapping("/public/detail")
     public BaseResponse<Bid> get(@RequestBody BidRequest bidRequest) {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getBid(bidRequest));
     }

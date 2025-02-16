@@ -234,6 +234,9 @@ public class BidServiceImpl implements BidService {
 
                 if (existedDetailUrls.contains(bid.getDetailUrl())) {
                     Bid existedBid = existedMap.get(bid.getDetailUrl());
+                    int pages = (int) Math.ceil((double) totalItem / 50);
+                    int oldPages = (int) Math.ceil((double) existedBid.getTotalItem() / 50);
+                    existedBid.setDonePage(existedBid.getDonePage() + pages - oldPages);
                     existedBid.setTotalItem(totalItem);
                     return existedBid;
                 }
