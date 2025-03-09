@@ -1,0 +1,37 @@
+package com.example.bid_api.controller;
+
+import com.example.bid_api.model.entity.Order;
+import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.OrderRequest;
+import com.example.bid_api.model.request.PageRequest;
+import com.example.bid_api.model.search.OrderSearch;
+import com.example.bid_api.service.OrderService;
+import com.example.bid_api.util.response.BaseResponse;
+import com.example.bid_api.util.response.Response;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/order")
+@RequiredArgsConstructor
+public class OrderController {
+    private final OrderService orderService;
+
+    @PostMapping("/store")
+    public BaseResponse<Order> list(@RequestBody OrderRequest req) {
+        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", orderService.storeOrder(req));
+    }
+
+    @GetMapping("/delete")
+    public BaseResponse<Order> delete(@RequestBody OrderRequest req) {
+        orderService.deleteOrder(req);
+        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", null);
+    }
+
+    @PostMapping("/order-list")
+    public BaseResponse<Object> getUserList(@RequestBody PageRequest<OrderSearch> request, @AuthenticationPrincipal User user) {
+        return Response.toData(orderService.getOrderList(request));
+    }
+}

@@ -2,8 +2,12 @@ package com.example.bid_api.service.impl;
 
 import com.example.bid_api.model.dto.CustomUserDetails;
 import com.example.bid_api.model.dto.Me;
+import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.User;
 import com.example.bid_api.model.request.LoginRequest;
+import com.example.bid_api.model.request.PageRequest;
+import com.example.bid_api.model.request.UserRequest;
+import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.repository.mongo.UserRepository;
 import com.example.bid_api.service.UserService;
 import com.example.bid_api.util.constant.ErrorCode;
@@ -11,8 +15,6 @@ import com.example.bid_api.util.exception.ServiceException;
 import com.example.bid_api.util.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONObject;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -96,4 +98,23 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         return false;
     }
 
+    public Page<User> getUserList(PageRequest<UserSearch> request) {
+        Page<User> result = new Page<>();
+        result.setItems(userRepository.getUserList(request));
+        result.setTotalItems(userRepository.countUserList(request.getSearch()));
+        return result;
+    }
+
+    public User update(UserRequest request) {
+        if (request.getUserId() == null || request.getUsername() == null || request.getRole() == null || request.getPassword() == null)
+            return null;
+        User user = userRepository.findByUserId(request.getUserId()).orElseGet(null);
+
+        if (user == null) throw new ServiceException(ErrorCode.E404.code(), "User not found");
+
+        user.setUsername(request.getUsername());
+        user.setPassword(request.getPassword());
+        user.setRole(request.getRole());
+        return userRepository.save(user);
+    }
 }

@@ -1,6 +1,9 @@
 package com.example.bid_api.controller;
 
 import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.PageRequest;
+import com.example.bid_api.model.request.UserRequest;
+import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.service.UserService;
 import com.example.bid_api.util.response.BaseResponse;
 import com.example.bid_api.util.response.Response;
@@ -8,16 +11,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@Slf4j
 @RequiredArgsConstructor
 @RequestMapping("/api/user")
 public class UserController {
     private final UserService userService;
+
     @GetMapping("/getMe")
     public BaseResponse<Object> getMe(@AuthenticationPrincipal User user) {
         return Response.toData(userService.getMe(user));
@@ -30,4 +31,14 @@ public class UserController {
         }
         return Response.toError(HttpStatus.BAD_REQUEST.value(), "logout fail");
     }
+
+    @PostMapping("/user-list")
+    public BaseResponse<Object> getUserList(@RequestBody PageRequest<UserSearch> request, @AuthenticationPrincipal User user) {
+        return Response.toData(userService.getUserList(request));
+    }
+
+//    @PostMapping("/update")
+//    public BaseResponse<Object> updateUser(@RequestBody UserRequest request, @AuthenticationPrincipal User user) {
+//        return Response.toData(userService.getUserList(request));
+//    }
 }
