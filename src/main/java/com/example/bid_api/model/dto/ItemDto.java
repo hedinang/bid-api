@@ -1,5 +1,6 @@
-package com.example.bid_api.model.request;
+package com.example.bid_api.model.dto;
 
+import com.example.bid_api.model.entity.Item;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,9 +8,6 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OrderRequest {
-    private String orderId;
-    private String bidId;
-    private String itemId;
+public class ItemDto extends Item {
     private long bidPrice;
 }

@@ -20,8 +20,8 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping("/store")
-    public BaseResponse<Order> list(@RequestBody OrderRequest req) {
-        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", orderService.storeOrder(req));
+    public BaseResponse<Order> store(@RequestBody OrderRequest req, @AuthenticationPrincipal User user) {
+        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", orderService.storeOrder(req, user));
     }
 
     @GetMapping("/delete")

@@ -11,11 +11,14 @@ import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.repository.mongo.ItemRepository;
 import com.example.bid_api.repository.mongo.OrderRepository;
 import com.example.bid_api.service.OrderService;
+import com.example.bid_api.util.StringUtil;
+import com.example.bid_api.util.constant.RoleType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -24,12 +27,20 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
 
-    public Order storeOrder(OrderRequest request) {
+    public Order storeOrder(OrderRequest request, User user) {
         Order order = orderMapper.orderRequestToMail(request);
+        order.setUserId(user.getUserId());
 
-        if (request.getOrderId() != null) {
-            Order currentOrder = orderRepository.findByOrderId(request.getOrderId());
-            order.setId(currentOrder.getId());
+        if (request.getItemId() != null && Objects.equals(user.getRole(), RoleType.CUSTOMER.toString())) {
+            Order currentOrder = orderRepository.findByUserIdAndItemId(user.getUserId(), request.getItemId());
+
+            if (Objects.isNull(currentOrder)) {
+                order.setOrderId(StringUtil.generateId());
+            } else {
+                order.setId(currentOrder.getId());
+            }
+        } else {
+            order.setOrderId(StringUtil.generateId());
         }
 
         return orderRepository.save(order);
