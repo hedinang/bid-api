@@ -8,6 +8,7 @@ import com.example.bid_api.model.search.OrderSearch;
 import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.repository.mongo.custom.CustomOrderRepository;
 import com.example.bid_api.util.StringUtil;
+import com.example.bid_api.util.constant.RoleType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -24,9 +26,10 @@ import java.util.Map;
 public class CustomOrderRepositoryImpl implements CustomOrderRepository {
     private final MongoTemplate mongoTemplate;
 
-    public List<Order> getOrderList(PageRequest<OrderSearch> request) {
-        String userNameSearch = "";
-        String roleSearch = "";
+    public List<Order> getOrderList(PageRequest<OrderSearch> request, User user) {
+        String userId = null;
+        String userNameSearch = null;
+        String roleSearch = null;
 
 //        if (request.getSearch() != null && request.getSearch().getUsername() != null && !request.getSearch().getUsername().isEmpty()) {
 //            userNameSearch = String.format("{ $match: { \"username\": { $regex: '%s', $options: 'i' } } }", request.getSearch().getUsername());
@@ -36,10 +39,14 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
 //            roleSearch = String.format("{ $match: { \"role\": '%s' } }", request.getSearch().getRole());
 //        }
 
-        String skip = String.format("{ $skip: %s },", (request.getPage() - 1) * 20);
-        String limit = String.format("{ $limit: %s },", 20);
+        String skip = String.format("{ $skip: %s }", (request.getPage() - 1) * 20);
+        String limit = String.format("{ $limit: %s }", 20);
 
-        Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userNameSearch, roleSearch, skip, limit));
+        if (user.getRole().equals(RoleType.CUSTOMER.toString())) {
+            userId = String.format("{ $match: { \"user_id\": '%s' } }", user.getUserId());
+        }
+
+        Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userId, userNameSearch, roleSearch, skip, limit));
         return mongoTemplate.aggregate(aggregation, "order", Order.class).getMappedResults();
     }
 

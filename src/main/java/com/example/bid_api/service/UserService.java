@@ -22,4 +22,6 @@ public interface UserService {
     Page<User> getUserList(PageRequest<UserSearch> request);
 
     User update(UserRequest request);
+
+    User store(UserRequest request);
 }

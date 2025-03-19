@@ -1,5 +1,6 @@
 package com.example.bid_api.service;
 
+import com.example.bid_api.model.dto.OrderDto;
 import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
@@ -13,5 +14,5 @@ public interface OrderService {
 
     void deleteOrder(OrderRequest request);
 
-    Page<Order> getOrderList(PageRequest<OrderSearch> request);
+    Page<OrderDto> getOrderList(PageRequest<OrderSearch> request, User user);
 }

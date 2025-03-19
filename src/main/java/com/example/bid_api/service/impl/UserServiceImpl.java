@@ -1,5 +1,6 @@
 package com.example.bid_api.service.impl;
 
+import com.example.bid_api.mapper.UserMapper;
 import com.example.bid_api.model.dto.CustomUserDetails;
 import com.example.bid_api.model.dto.Me;
 import com.example.bid_api.model.dto.Page;
@@ -36,6 +37,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
+
+    private final UserMapper userMapper;
 
     public Map<String, Object> loginUser(LoginRequest request) {
         try {
@@ -115,6 +118,26 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         user.setUsername(request.getUsername());
         user.setPassword(request.getPassword());
         user.setRole(request.getRole());
+        return userRepository.save(user);
+    }
+
+    public User store(UserRequest request) {
+        if (request.getUserId() == null || request.getUsername() == null || request.getRole() == null || request.getPassword() == null)
+            return null;
+        User currentUser = userRepository.findByUserId(request.getUserId()).orElseGet(null);
+        User user;
+
+        if (currentUser != null) {
+            user = currentUser;
+            user.setName(request.getName());
+            user.setEmail(request.getEmail());
+            user.setPhone(request.getPhone());
+            user.setUsername(request.getUsername());
+            user.setRole(request.getRole());
+        } else {
+            user = userMapper.userRequestToUser(request);
+        }
+
         return userRepository.save(user);
     }
 }

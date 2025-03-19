@@ -8,7 +8,7 @@ import com.example.bid_api.model.search.OrderSearch;
 import java.util.List;
 
 public interface CustomOrderRepository {
-    List<Order> getOrderList(PageRequest<OrderSearch> request);
+    List<Order> getOrderList(PageRequest<OrderSearch> request, User user);
 
     long countOrderList(OrderSearch request);
 }

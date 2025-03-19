@@ -26,6 +26,15 @@ public class User extends MongoBaseEntity {
     @Field(name = "password")
     private String password;
 
+    @Field(name = "name")
+    private String name;
+
+    @Field(name = "email")
+    private String email;
+
+    @Field(name = "phone")
+    private String phone;
+
     @Field(name = "access_token")
     private String accessToken;
 

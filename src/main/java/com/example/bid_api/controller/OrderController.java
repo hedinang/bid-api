@@ -1,5 +1,7 @@
 package com.example.bid_api.controller;
 
+import com.example.bid_api.model.dto.OrderDto;
+import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
 import com.example.bid_api.model.request.OrderRequest;
@@ -31,7 +33,7 @@ public class OrderController {
     }
 
     @PostMapping("/order-list")
-    public BaseResponse<Object> getUserList(@RequestBody PageRequest<OrderSearch> request, @AuthenticationPrincipal User user) {
-        return Response.toData(orderService.getOrderList(request));
+    public BaseResponse<Page<OrderDto>> getUserList(@RequestBody PageRequest<OrderSearch> request, @AuthenticationPrincipal User user) {
+        return Response.toData(orderService.getOrderList(request, user));
     }
 }

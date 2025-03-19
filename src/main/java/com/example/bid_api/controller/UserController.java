@@ -8,7 +8,6 @@ import com.example.bid_api.service.UserService;
 import com.example.bid_api.util.response.BaseResponse;
 import com.example.bid_api.util.response.Response;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +34,11 @@ public class UserController {
     @PostMapping("/user-list")
     public BaseResponse<Object> getUserList(@RequestBody PageRequest<UserSearch> request, @AuthenticationPrincipal User user) {
         return Response.toData(userService.getUserList(request));
+    }
+
+    @PostMapping("/store-user")
+    public BaseResponse<Object> getUserList(@RequestBody UserRequest request, @AuthenticationPrincipal User user) {
+        return Response.toData(userService.store(request));
     }
 
 //    @PostMapping("/update")
