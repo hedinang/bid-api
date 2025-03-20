@@ -31,7 +31,7 @@ public class UserController {
         return Response.toError(HttpStatus.BAD_REQUEST.value(), "logout fail");
     }
 
-    @PostMapping("/user-list")
+    @PostMapping("/list")
     public BaseResponse<Object> getUserList(@RequestBody PageRequest<UserSearch> request, @AuthenticationPrincipal User user) {
         return Response.toData(userService.getUserList(request));
     }

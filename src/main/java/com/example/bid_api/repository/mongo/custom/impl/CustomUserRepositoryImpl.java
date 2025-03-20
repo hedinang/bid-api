@@ -33,8 +33,8 @@ public class CustomUserRepositoryImpl implements CustomUserRepository {
             roleSearch = String.format("{ $match: { \"role\": '%s' } }", request.getSearch().getRole());
         }
 
-        String skip = String.format("{ $skip: %s },", (request.getPage() - 1) * 20);
-        String limit = String.format("{ $limit: %s },", 20);
+        String skip = String.format("{ $skip: %s }", (request.getPage() - 1) * 20);
+        String limit = String.format("{ $limit: %s }", 20);
 
         Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userNameSearch, roleSearch, skip, limit));
         return mongoTemplate.aggregate(aggregation, "user", User.class).getMappedResults();
@@ -44,13 +44,13 @@ public class CustomUserRepositoryImpl implements CustomUserRepository {
         String userNameSearch = "";
         String roleSearch = "";
 
-        if (request.getUsername() != null && !request.getUsername().isEmpty()) {
-            userNameSearch = String.format("{ $match: { \"username\": { $regex: '%s', $options: 'i' } } }", request.getUsername());
-        }
-
-        if (request.getRole() != null && !request.getRole().isEmpty()) {
-            roleSearch = String.format("{ $match: { \"role\": '%s' } }", request.getRole());
-        }
+//        if (request.getUsername() != null && !request.getUsername().isEmpty()) {
+//            userNameSearch = String.format("{ $match: { \"username\": { $regex: '%s', $options: 'i' } } }", request.getUsername());
+//        }
+//
+//        if (request.getRole() != null && !request.getRole().isEmpty()) {
+//            roleSearch = String.format("{ $match: { \"role\": '%s' } }", request.getRole());
+//        }
 
         String count = "{ $count: \"total\" }";
 
