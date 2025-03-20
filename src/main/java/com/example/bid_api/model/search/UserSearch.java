@@ -6,4 +6,5 @@ import lombok.Data;
 public class UserSearch {
     public String username;
     public String role;
+    public String status;
 }

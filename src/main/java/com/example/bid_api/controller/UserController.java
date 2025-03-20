@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Objects;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/user")
@@ -41,8 +43,11 @@ public class UserController {
         return Response.toData(userService.store(request));
     }
 
-//    @PostMapping("/update")
-//    public BaseResponse<Object> updateUser(@RequestBody UserRequest request, @AuthenticationPrincipal User user) {
-//        return Response.toData(userService.getUserList(request));
-//    }
+    @PostMapping("/reset-password/{userId}")
+    public BaseResponse<String> resetPassword(@PathVariable String userId, @AuthenticationPrincipal User user) {
+//        if (!Objects.equals(user.getRoleCode(), "ADMIN")) return new BaseResponse<>(403, "Dont have permission", null);
+
+        userService.resetPassword(userId, user);
+        return new BaseResponse<>(200, "Delete user successfully", null);
+    }
 }

@@ -11,6 +11,7 @@ import com.example.bid_api.model.request.UserRequest;
 import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.repository.mongo.UserRepository;
 import com.example.bid_api.service.UserService;
+import com.example.bid_api.util.StringUtil;
 import com.example.bid_api.util.constant.ErrorCode;
 import com.example.bid_api.util.exception.ServiceException;
 import com.example.bid_api.util.jwt.JwtTokenProvider;
@@ -23,12 +24,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -77,7 +76,12 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new ServiceException(ErrorCode.E404.code(), "User not found"));
+        User user = userRepository.findByUsername(username);
+
+        if (user == null) {
+            throw new ServiceException(ErrorCode.E404.code(), "User not found");
+        }
+
         return new CustomUserDetails(user);
     }
 
@@ -122,22 +126,74 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     public User store(UserRequest request) {
-        if (request.getUserId() == null || request.getUsername() == null || request.getRole() == null || request.getPassword() == null)
+//        log.info(request.toString());
+//
+//        return null;
+
+        if (request.getUsername() == null || request.getRole() == null)
             return null;
-        User currentUser = userRepository.findByUserId(request.getUserId()).orElseGet(null);
+
+        User existedUsername = userRepository.findByUsername(request.getUsername());
         User user;
 
-        if (currentUser != null) {
+        if (request.getUserId() == null) {
+            //check existed Username
+            if (existedUsername != null) {
+                return null;
+            }
+
+            user = userMapper.userRequestToUser(request);
+            user.setUserId(request.getUserId());
+            BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+            String encodedPassword = passwordEncoder.encode("Qwer123!");
+            user.setPassword(encodedPassword);
+            user.setUserId(StringUtil.generateId());
+            user.setStatus("ACTIVE");
+        } else {
+            User currentUser = userRepository.findByUserId(request.getUserId()).orElseGet(null);
+
+            if (currentUser == null) {
+                return null;
+            }
+
+            if (existedUsername != null && !Objects.equals(currentUser.getUsername(), request.getUsername())
+                    && !Objects.equals(currentUser.getUsername(), existedUsername.getUsername())) {
+                return null;
+            }
+
             user = currentUser;
+            user.setUsername(request.getUsername());
             user.setName(request.getName());
             user.setEmail(request.getEmail());
             user.setPhone(request.getPhone());
             user.setUsername(request.getUsername());
             user.setRole(request.getRole());
-        } else {
-            user = userMapper.userRequestToUser(request);
+            user.setStatus(request.getStatus());
         }
 
         return userRepository.save(user);
+    }
+
+    @Override
+    public void resetPassword(String userId, User user) {
+        if (userId == null || userId.isEmpty()) {
+            throw new ServiceException(ErrorCode.E401.code(), "UserId must be not null");
+        }
+
+        User oldUser = userRepository.findByUserId(userId).orElse(null);
+
+        if (oldUser == null) {
+            throw new ServiceException(ErrorCode.E401.code(), String.format("UserId %s is not existed", userId));
+        }
+
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        String encodedPassword = passwordEncoder.encode("Qwer123!");
+        oldUser.setPassword(encodedPassword);
+
+        try {
+            userRepository.save(oldUser);
+        } catch (Exception e) {
+            log.error("Failed to reset password: {}", e.getMessage());
+        }
     }
 }

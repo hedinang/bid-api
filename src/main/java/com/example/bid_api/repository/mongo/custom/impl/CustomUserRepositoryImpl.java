@@ -24,6 +24,7 @@ public class CustomUserRepositoryImpl implements CustomUserRepository {
     public List<User> getUserList(PageRequest<UserSearch> request) {
         String userNameSearch = "";
         String roleSearch = "";
+        String statusSearch = "";
 
         if (request.getSearch() != null && request.getSearch().getUsername() != null && !request.getSearch().getUsername().isEmpty()) {
             userNameSearch = String.format("{ $match: { \"username\": { $regex: '%s', $options: 'i' } } }", request.getSearch().getUsername());
@@ -33,28 +34,37 @@ public class CustomUserRepositoryImpl implements CustomUserRepository {
             roleSearch = String.format("{ $match: { \"role\": '%s' } }", request.getSearch().getRole());
         }
 
+        if (request.getSearch() != null && request.getSearch().getStatus() != null && !request.getSearch().getStatus().isEmpty()) {
+            statusSearch = String.format("{ $match: { \"status\": '%s' } }", request.getSearch().getStatus());
+        }
+
         String skip = String.format("{ $skip: %s }", (request.getPage() - 1) * 20);
         String limit = String.format("{ $limit: %s }", 20);
 
-        Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userNameSearch, roleSearch, skip, limit));
+        Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userNameSearch, roleSearch, statusSearch, skip, limit));
         return mongoTemplate.aggregate(aggregation, "user", User.class).getMappedResults();
     }
 
     public long countUserList(UserSearch request) {
         String userNameSearch = "";
         String roleSearch = "";
+        String statusSearch = "";
 
-//        if (request.getUsername() != null && !request.getUsername().isEmpty()) {
-//            userNameSearch = String.format("{ $match: { \"username\": { $regex: '%s', $options: 'i' } } }", request.getUsername());
-//        }
-//
-//        if (request.getRole() != null && !request.getRole().isEmpty()) {
-//            roleSearch = String.format("{ $match: { \"role\": '%s' } }", request.getRole());
-//        }
+        if (request != null && request.getUsername() != null && !request.getUsername().isEmpty()) {
+            userNameSearch = String.format("{ $match: { \"username\": { $regex: '%s', $options: 'i' } } }", request.getUsername());
+        }
+
+        if (request != null && request.getRole() != null && !request.getRole().isEmpty()) {
+            roleSearch = String.format("{ $match: { \"role\": '%s' } }", request.getRole());
+        }
+
+        if (request != null && request.getStatus() != null && !request.getStatus().isEmpty()) {
+            statusSearch = String.format("{ $match: { \"status\": '%s' } }", request.getStatus());
+        }
 
         String count = "{ $count: \"total\" }";
 
-        Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userNameSearch, roleSearch, count));
+        Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userNameSearch, roleSearch, statusSearch, count));
         Map<String, Integer> totalItem = mongoTemplate.aggregate(aggregation, "user", Map.class).getUniqueMappedResult();
 
         if (totalItem == null) {

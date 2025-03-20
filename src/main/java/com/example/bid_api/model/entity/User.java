@@ -16,6 +16,7 @@ import org.springframework.data.mongodb.core.mapping.MongoId;
 public class User extends MongoBaseEntity {
     @MongoId
     private ObjectId id;
+
     @Indexed(unique = true)
     @Field(name = "user_id")
     private String userId;

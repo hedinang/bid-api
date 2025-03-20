@@ -24,4 +24,6 @@ public interface UserService {
     User update(UserRequest request);
 
     User store(UserRequest request);
+
+    void resetPassword(String userId, User user);
 }
