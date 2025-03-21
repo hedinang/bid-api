@@ -42,7 +42,8 @@ public class CustomItemRepositoryImpl implements CustomItemRepository {
                 matchCategory = String.format("{ $match: {category: '%s' } }", itemRequest.getSearchCategory().trim());
             }
 
-            Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(matchBidId, matchBidStatus, matchBranch, matchRank, matchCategory, matchSkip, matchLimit));
+            Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(matchBidId, matchBidStatus, matchBranch,
+                    matchRank, matchCategory, matchSkip, matchLimit));
             return mongoTemplate.aggregate(aggregation, "item", Item.class);
         } catch (Exception e) {
             log.error("getList CustomTaskRepositoryImpl error : {}", e.getMessage());

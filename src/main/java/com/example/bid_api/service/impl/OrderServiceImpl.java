@@ -1,6 +1,8 @@
 package com.example.bid_api.service.impl;
 
+import com.example.bid_api.configuration.ThreadPoolConfig;
 import com.example.bid_api.mapper.OrderMapper;
+import com.example.bid_api.model.dto.ItemDto;
 import com.example.bid_api.model.dto.OrderDto;
 import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.Item;
@@ -19,6 +21,8 @@ import com.example.bid_api.util.constant.RoleType;
 import com.example.bid_api.util.date.DateUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.MailSender;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -32,8 +36,15 @@ public class OrderServiceImpl implements OrderService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final OrderMapper orderMapper;
+    private final MailSender mailSender;
+    private final ThreadPoolConfig threadPoolConfig;
 
     public Order storeOrder(OrderRequest request, User user) {
+        //verify item
+        List<Item> itemList = itemRepository.findByItemId(request.getItemId());
+        if (itemList.isEmpty()) return null;
+
+        Item item = itemList.get(itemList.size() - 1);
         Order order = orderMapper.orderRequestToMail(request);
         order.setUserId(user.getUserId());
 
@@ -50,6 +61,9 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setUpdatedAt(DateUtil.formatDateTime(new Date()));
+
+        threadPoolConfig.getMailThreadPool().execute(() -> sendEmail(user.getEmail(), "Stjtrading Order",
+                String.format("Your order: %s has been created", item.getTitle())));
         return orderRepository.save(order);
     }
 
@@ -98,5 +112,19 @@ public class OrderServiceImpl implements OrderService {
         result.setItems(orderDtoList);
         result.setTotalItems(orderRepository.countOrderList(request.getSearch()));
         return result;
+    }
+
+    public void sendEmail(String destination, String subject, String body) {
+        if (destination == null || subject == null || body == null) return;
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(destination);
+            message.setSubject(subject);
+            message.setText(body);
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Error sending mail: " + e.getMessage());
+        }
     }
 }

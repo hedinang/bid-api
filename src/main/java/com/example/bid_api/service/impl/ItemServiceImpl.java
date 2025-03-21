@@ -56,7 +56,10 @@ public class ItemServiceImpl implements ItemService {
 
         if (user != null && Objects.equals(RoleType.CUSTOMER.toString(), user.getRole())) {
             Order order = orderRepository.findByUserIdAndItemId(user.getUserId(), itemDto.getItemId());
-            itemDto.setBidPrice(order.getBidPrice());
+
+            if (order != null) {
+                itemDto.setBidPrice(order.getBidPrice());
+            }
         }
 
         return itemDto;

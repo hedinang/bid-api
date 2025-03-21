@@ -126,10 +126,6 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     public User store(UserRequest request) {
-//        log.info(request.toString());
-//
-//        return null;
-
         if (request.getUsername() == null || request.getRole() == null)
             return null;
 
