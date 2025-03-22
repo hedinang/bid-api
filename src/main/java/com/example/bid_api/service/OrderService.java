@@ -12,6 +12,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 public interface OrderService {
     Order storeOrder(OrderRequest request, User user);
 
+    void changeStatus(OrderRequest request, User user);
+
     void deleteOrder(OrderRequest request);
 
     Page<OrderDto> getOrderList(PageRequest<OrderSearch> request, User user);

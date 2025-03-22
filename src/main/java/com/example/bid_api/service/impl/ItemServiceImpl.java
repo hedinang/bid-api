@@ -40,6 +40,8 @@ public class ItemServiceImpl implements ItemService {
             for (ItemDto itemDto : itemDtoList) {
                 if (orderMap.containsKey(itemDto.getItemId())) {
                     itemDto.setBidPrice(orderMap.get(itemDto.getItemId()).getBidPrice());
+                    itemDto.setOrderType(orderMap.get(itemDto.getItemId()).getType());
+                    itemDto.setOrderId(orderMap.get(itemDto.getItemId()).getOrderId());
                 }
             }
         }
@@ -59,6 +61,8 @@ public class ItemServiceImpl implements ItemService {
 
             if (order != null) {
                 itemDto.setBidPrice(order.getBidPrice());
+                itemDto.setOrderType(order.getType());
+                itemDto.setOrderId(order.getOrderId());
             }
         }
 

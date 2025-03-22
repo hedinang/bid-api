@@ -12,4 +12,5 @@ public class OrderRequest {
     private String bidId;
     private String itemId;
     private long bidPrice;
+    private String type;
 }

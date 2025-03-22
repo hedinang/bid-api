@@ -27,5 +27,6 @@ public class Order extends MongoBaseEntity {
     private String itemId;
     @Field(name = "bid_price")
     private long bidPrice;
-
+    @Field(name = "type")
+    private String type;
 }

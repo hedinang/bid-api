@@ -10,4 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ItemDto extends Item {
     private long bidPrice;
+    private String orderType;
+    private String orderId;
 }

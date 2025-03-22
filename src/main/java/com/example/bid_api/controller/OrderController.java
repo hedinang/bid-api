@@ -26,6 +26,12 @@ public class OrderController {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", orderService.storeOrder(req, user));
     }
 
+    @PostMapping("/change-status")
+    public BaseResponse<Order> changeStatus(@RequestBody OrderRequest req, @AuthenticationPrincipal User user) {
+        orderService.changeStatus(req, user);
+        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", null);
+    }
+
     @GetMapping("/delete")
     public BaseResponse<Order> delete(@RequestBody OrderRequest req) {
         orderService.deleteOrder(req);
