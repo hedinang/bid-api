@@ -39,8 +39,8 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
 //            roleSearch = String.format("{ $match: { \"role\": '%s' } }", request.getSearch().getRole());
 //        }
 
-        String skip = String.format("{ $skip: %s }", (request.getPage() - 1) * 20);
-        String limit = String.format("{ $limit: %s }", 20);
+        String skip = String.format("{ $skip: %s }", (request.getPage() - 1) * request.getLimit());
+        String limit = String.format("{ $limit: %s }", request.getLimit());
 
         if (user.getRole().equals(RoleType.CUSTOMER.toString())) {
             userId = String.format("{ $match: { \"user_id\": '%s' } }", user.getUserId());

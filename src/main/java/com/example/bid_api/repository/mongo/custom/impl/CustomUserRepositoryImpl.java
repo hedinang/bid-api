@@ -38,8 +38,8 @@ public class CustomUserRepositoryImpl implements CustomUserRepository {
             statusSearch = String.format("{ $match: { \"status\": '%s' } }", request.getSearch().getStatus());
         }
 
-        String skip = String.format("{ $skip: %s }", (request.getPage() - 1) * 20);
-        String limit = String.format("{ $limit: %s }", 20);
+        String skip = String.format("{ $skip: %s }", (request.getPage() - 1) * request.getLimit());
+        String limit = String.format("{ $limit: %s }", request.getLimit());
 
         Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userNameSearch, roleSearch, statusSearch, skip, limit));
         return mongoTemplate.aggregate(aggregation, "user", User.class).getMappedResults();
