@@ -1,23 +1,25 @@
 package com.example.bid_api.controller;
 
 import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.PageRequest;
+import com.example.bid_api.model.request.UserRequest;
+import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.service.UserService;
 import com.example.bid_api.util.response.BaseResponse;
 import com.example.bid_api.util.response.Response;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Objects;
 
 @RestController
-@Slf4j
 @RequiredArgsConstructor
 @RequestMapping("/api/user")
 public class UserController {
     private final UserService userService;
+
     @GetMapping("/getMe")
     public BaseResponse<Object> getMe(@AuthenticationPrincipal User user) {
         return Response.toData(userService.getMe(user));
@@ -29,5 +31,23 @@ public class UserController {
             return Response.toData(user.getUserId());
         }
         return Response.toError(HttpStatus.BAD_REQUEST.value(), "logout fail");
+    }
+
+    @PostMapping("/list")
+    public BaseResponse<Object> getUserList(@RequestBody PageRequest<UserSearch> request, @AuthenticationPrincipal User user) {
+        return Response.toData(userService.getUserList(request));
+    }
+
+    @PostMapping("/store-user")
+    public BaseResponse<Object> getUserList(@RequestBody UserRequest request, @AuthenticationPrincipal User user) {
+        return Response.toData(userService.store(request));
+    }
+
+    @PostMapping("/reset-password/{userId}")
+    public BaseResponse<String> resetPassword(@PathVariable String userId, @AuthenticationPrincipal User user) {
+//        if (!Objects.equals(user.getRoleCode(), "ADMIN")) return new BaseResponse<>(403, "Dont have permission", null);
+
+        userService.resetPassword(userId, user);
+        return new BaseResponse<>(200, "Delete user successfully", null);
     }
 }

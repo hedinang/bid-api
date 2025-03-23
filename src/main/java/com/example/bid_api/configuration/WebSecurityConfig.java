@@ -20,6 +20,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -76,7 +77,17 @@ public class WebSecurityConfig {
 
     @Bean
     UserDetailsService userDetailsService() {
-        return username -> new CustomUserDetails(userRepository.findByUsername(username).orElseThrow(() -> new ServiceException("User not found")));
+        return username -> new CustomUserDetails(getUser(username));
+    }
+
+    private User getUser(String username) {
+        User user = userRepository.findByUsername(username);
+
+        if (user == null) {
+            throw new ServiceException("User not found");
+        }
+
+        return user;
     }
 
     @Bean

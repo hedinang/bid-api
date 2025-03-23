@@ -10,35 +10,23 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.MongoId;
 
 @Data
-@Document(collection = "user")
+@Document(collection = "order")
 @AllArgsConstructor
 @NoArgsConstructor
-public class User extends MongoBaseEntity {
+public class Order extends MongoBaseEntity {
     @MongoId
     private ObjectId id;
-
     @Indexed(unique = true)
+    @Field(name = "order_id")
+    private String orderId;
     @Field(name = "user_id")
     private String userId;
-
-    @Field(name = "username")
-    private String username;
-
-    @Field(name = "password")
-    private String password;
-
-    @Field(name = "name")
-    private String name;
-
-    @Field(name = "email")
-    private String email;
-
-    @Field(name = "phone")
-    private String phone;
-
-    @Field(name = "access_token")
-    private String accessToken;
-
-    @Field(name = "role")
-    private String role;
+    @Field(name = "bid_id")
+    private String bidId;
+    @Field(name = "item_id")
+    private String itemId;
+    @Field(name = "bid_price")
+    private long bidPrice;
+    @Field(name = "type")
+    private String type;
 }
