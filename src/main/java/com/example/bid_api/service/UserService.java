@@ -3,6 +3,7 @@ package com.example.bid_api.service;
 import com.example.bid_api.model.dto.Me;
 import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.ChangePasswordRequest;
 import com.example.bid_api.model.request.LoginRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.request.UserRequest;
@@ -26,4 +27,6 @@ public interface UserService {
     User store(UserRequest request);
 
     void resetPassword(String userId, User user);
+
+    User changePassword(String userId, ChangePasswordRequest request);
 }

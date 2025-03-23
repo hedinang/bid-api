@@ -5,6 +5,7 @@ import com.example.bid_api.model.dto.CustomUserDetails;
 import com.example.bid_api.model.dto.Me;
 import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.ChangePasswordRequest;
 import com.example.bid_api.model.request.LoginRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.request.UserRequest;
@@ -167,6 +168,28 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             user.setStatus(request.getStatus());
         }
 
+        return userRepository.save(user);
+    }
+
+    @Override
+    public User changePassword(String userId, ChangePasswordRequest request) {
+        Optional<User> userOptional = userRepository.findByUserId(userId);
+        if (userOptional.isEmpty()) {
+            throw new ServiceException("User not found");
+        }
+        User user = userOptional.get();
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new ServiceException("Current password is incorrect");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new ServiceException("New password cannot be the same as the old password");
+        }
+
+        String newEncodedPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(newEncodedPassword);
         return userRepository.save(user);
     }
 
