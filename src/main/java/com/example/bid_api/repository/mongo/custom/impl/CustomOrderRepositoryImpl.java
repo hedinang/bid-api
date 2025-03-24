@@ -46,7 +46,9 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
             userId = String.format("{ $match: { \"user_id\": '%s' } }", user.getUserId());
         }
 
-        Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userId, userNameSearch, roleSearch, skip, limit));
+        String sort = "{ $sort: { \"updated_at\": -1 } }";
+
+        Aggregation aggregation = StringUtil.buildAggregation(Arrays.asList(userId, userNameSearch, roleSearch, sort, skip, limit));
         return mongoTemplate.aggregate(aggregation, "order", Order.class).getMappedResults();
     }
 
