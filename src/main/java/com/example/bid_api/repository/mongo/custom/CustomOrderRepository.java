@@ -10,5 +10,5 @@ import java.util.List;
 public interface CustomOrderRepository {
     List<Order> getOrderList(PageRequest<OrderSearch> request, User user);
 
-    long countOrderList(OrderSearch request);
+    long countOrderList(OrderSearch request, User user);
 }

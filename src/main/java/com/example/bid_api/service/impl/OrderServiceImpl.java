@@ -5,6 +5,7 @@ import com.example.bid_api.mapper.OrderMapper;
 import com.example.bid_api.model.dto.ItemDto;
 import com.example.bid_api.model.dto.OrderDto;
 import com.example.bid_api.model.dto.Page;
+import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.entity.Item;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
@@ -12,6 +13,7 @@ import com.example.bid_api.model.request.OrderRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.search.OrderSearch;
 import com.example.bid_api.model.search.UserSearch;
+import com.example.bid_api.repository.mongo.BidRepository;
 import com.example.bid_api.repository.mongo.ItemRepository;
 import com.example.bid_api.repository.mongo.OrderRepository;
 import com.example.bid_api.repository.mongo.UserRepository;
@@ -23,6 +25,7 @@ import com.example.bid_api.util.date.DateUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
+    private final BidRepository bidRepository;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final OrderMapper orderMapper;
@@ -50,24 +54,32 @@ public class OrderServiceImpl implements OrderService {
         if (itemList.isEmpty()) return null;
 
         Item item = itemList.get(itemList.size() - 1);
-        Order order = orderMapper.orderRequestToMail(request);
-        order.setUserId(user.getUserId());
 
-        if (request.getItemId() != null && Objects.equals(user.getRole(), RoleType.CUSTOMER.toString())) {
-            Order currentOrder = orderRepository.findByUserIdAndItemId(user.getUserId(), request.getItemId());
+        Order order;
 
-            if (Objects.isNull(currentOrder)) {
-                order.setOrderId(StringUtil.generateId());
-            } else {
-                order.setOrderId(currentOrder.getOrderId());
-                order.setId(currentOrder.getId());
+        if (request.getOrderId() != null) {
+            order = orderRepository.findByOrderId(request.getOrderId());
+
+            if (order == null) {
+                return null;
             }
-        } else {
-            order.setOrderId(StringUtil.generateId());
-        }
 
-        order.setUpdatedAt(DateUtil.formatDateTime(new Date()));
-        order.setType(OrderStepType.ORDER.toString());
+            order.setBidPrice(request.getBidPrice());
+            order.setType(request.getType());
+            order.setUpdatedAt(DateUtil.formatDateTime(new Date()));
+        } else {
+            order = orderMapper.itemToOrder(item);
+            Bid bid = bidRepository.findByBidIdAndBidStatus(item.getBidId(), item.getBidStatus());
+            order.setItemDate(bid.getOpenTime());
+            order.setBidPrice(request.getBidPrice());
+            order.setType(OrderStepType.ORDER.toString());
+            order.setUpdatedAt(DateUtil.formatDateTime(new Date()));
+            order.setUsername(user.getUsername());
+            order.setName(user.getName());
+            order.setEmail(user.getEmail());
+            order.setPhone(user.getPhone());
+            order.setUserId(user.getUserId());
+        }
 
         threadPoolConfig.getMailThreadPool().execute(() -> sendEmail(mainEmailAddress, "Stjtrading Order",
                 String.format("User: %s - %s đã đặt 1 order với : %s - %s", user.getUsername(),
@@ -106,14 +118,15 @@ public class OrderServiceImpl implements OrderService {
 
                 //admin
                 if (Objects.equals(request.getType(), OrderStepType.BIDDING.toString())) {
-                    User client = userRepository.findByUserId(currentOrder.getUserId()).orElse(null);
-
-                    if (client == null || client.getEmail() == null) {
-                        return;
-                    }
-
-                    destinationMail = client.getEmail();
-                    content = String.format("Order của bạn: %s - %s đã được đặt. Vui lòng đợi kết quả. Xin cảm ơn", item.getItemId(), item.getTitle());
+//                    User client = userRepository.findByUserId(currentOrder.getUserId()).orElse(null);
+//
+//                    if (client == null || client.getEmail() == null) {
+//                        return;
+//                    }
+//
+//                    destinationMail = client.getEmail();
+//                    content = String.format("Order của bạn: %s - %s đã được đặt. Vui lòng đợi kết quả. Xin cảm ơn", item.getItemId(), item.getTitle());
+                    return;
                 }
 
                 if (Objects.equals(request.getType(), OrderStepType.SUCCESS.toString())) {
@@ -128,14 +141,15 @@ public class OrderServiceImpl implements OrderService {
                 }
 
                 if (Objects.equals(request.getType(), OrderStepType.FAILED.toString())) {
-                    User client = userRepository.findByUserId(currentOrder.getUserId()).orElse(null);
-
-                    if (client == null || client.getEmail() == null) {
-                        return;
-                    }
-
-                    destinationMail = client.getEmail();
-                    content = String.format("Thật đáng tiếc order : %s - %s đã đấu giá thất bại", item.getItemId(), item.getTitle());
+//                    User client = userRepository.findByUserId(currentOrder.getUserId()).orElse(null);
+//
+//                    if (client == null || client.getEmail() == null) {
+//                        return;
+//                    }
+//
+//                    destinationMail = client.getEmail();
+//                    content = String.format("Thật đáng tiếc order : %s - %s đã đấu giá thất bại", item.getItemId(), item.getTitle());
+                    return;
                 }
 
                 sendEmail(destinationMail, "Stjtrading Order", content);
@@ -150,44 +164,9 @@ public class OrderServiceImpl implements OrderService {
     public Page<OrderDto> getOrderList(PageRequest<OrderSearch> request, User user) {
         Page<OrderDto> result = new Page<>();
         List<Order> orders = orderRepository.getOrderList(request, user);
-        Map<String, Item> itemMap = itemRepository.findByItemIdIn(orders.stream().map(Order::getItemId).toList()).stream()
-                .collect(Collectors.toMap(Item::getItemId, item -> item, (a, b) -> a));
-        Map<String, User> userMap = new HashMap<>();
-
-        if (!user.getRole().equals(RoleType.CUSTOMER.toString())) {
-            userMap = userRepository.findByUserIdIn(orders.stream().map(Order::getUserId).toList()).stream()
-                    .collect(Collectors.toMap(User::getUserId, e -> e, (a, b) -> a));
-        }
-
-        Map<String, User> finalUserMap = userMap;
-
-        List<OrderDto> orderDtoList = orders.stream().map(order -> {
-            OrderDto orderDto = orderMapper.orderToOrderDto(order);
-            Item item = itemMap.get(order.getItemId());
-            orderDto.setBidId(item.getBidId());
-            orderDto.setItemId(item.getItemId());
-            orderDto.setBranch(item.getBranch());
-            orderDto.setTitle(item.getTitle());
-            orderDto.setDetailUrls(item.getDetailUrls());
-            orderDto.setDescription(item.getDescription());
-            orderDto.setCategory(item.getCategory());
-            orderDto.setRank(item.getRank());
-            orderDto.setItemUrl(item.getItemUrl());
-
-            if (!user.getRole().equals(RoleType.CUSTOMER.toString())) {
-                User client = finalUserMap.get(order.getUserId());
-                orderDto.setUserId(client.getUserId());
-                orderDto.setUsername(client.getUsername());
-                orderDto.setName(client.getName());
-                orderDto.setEmail(client.getEmail());
-                orderDto.setPhone(client.getPhone());
-            }
-
-            return orderDto;
-        }).toList();
-
+        List<OrderDto> orderDtoList = orders.stream().map(orderMapper::orderToOrderDto).toList();
         result.setItems(orderDtoList);
-        result.setTotalItems(orderRepository.countOrderList(request.getSearch()));
+        result.setTotalItems(orderRepository.countOrderList(request.getSearch(), user));
         return result;
     }
 
