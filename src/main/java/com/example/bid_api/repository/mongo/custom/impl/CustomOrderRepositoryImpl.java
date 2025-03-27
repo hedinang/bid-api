@@ -72,8 +72,8 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
         if (request.getSearch() != null && request.getSearch().getOrderDate() != null && !request.getSearch().getOrderDate().isEmpty()) {
             Instant orderInstant = Instant.parse(request.getSearch().getOrderDate());
             LocalDate orderDate = orderInstant.atZone(ZoneOffset.UTC).toLocalDate();
-            Instant startOfOrderDay = orderDate.atStartOfDay(ZoneOffset.UTC).toInstant();
-            Instant endOfOrderDay = orderDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.UTC).toInstant();
+            Instant startOfOrderDay = orderDate.atStartOfDay(ZoneOffset.ofHours(7)).toInstant();
+            Instant endOfOrderDay = orderDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.ofHours(7)).toInstant();
 
             String startOfOrderDayStr = formatter.format(startOfOrderDay);
             String endOfOrderDayStr = formatter.format(endOfOrderDay);
@@ -85,8 +85,8 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
         if (request.getSearch() != null && request.getSearch().getItemDate() != null && !request.getSearch().getItemDate().isEmpty()) {
             Instant itemInstant = Instant.parse(request.getSearch().getItemDate());
             LocalDate itemDate = itemInstant.atZone(ZoneOffset.UTC).toLocalDate();
-            Instant startOfItemDay = itemDate.atStartOfDay(ZoneOffset.UTC).toInstant();
-            Instant endOfItemDay = itemDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.UTC).toInstant();
+            Instant startOfItemDay = itemDate.atStartOfDay(ZoneOffset.ofHours(7)).toInstant();
+            Instant endOfItemDay = itemDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.ofHours(7)).toInstant();
 
             String startOfItemDayStr = formatter.format(startOfItemDay);
             String endOfItemDayStr = formatter.format(endOfItemDay);
