@@ -69,6 +69,7 @@ public class OrderServiceImpl implements OrderService {
             order.setUpdatedAt(DateUtil.formatDateTime(new Date()));
         } else {
             order = orderMapper.itemToOrder(item);
+            order.setOrderId(StringUtil.generateId());
             Bid bid = bidRepository.findByBidIdAndBidStatus(item.getBidId(), item.getBidStatus());
             order.setItemDate(bid.getOpenTime());
             order.setBidPrice(request.getBidPrice());
