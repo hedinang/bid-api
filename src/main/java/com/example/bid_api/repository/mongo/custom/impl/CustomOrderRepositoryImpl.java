@@ -32,7 +32,7 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
     private final MongoTemplate mongoTemplate;
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ISO_INSTANT;
-
+    private final DateTimeFormatter noZoneFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);;
 
     public List<Order> getOrderList(PageRequest<OrderSearch> request, User user) {
         String userId = null;
@@ -85,11 +85,11 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
         if (request.getSearch() != null && request.getSearch().getItemDate() != null && !request.getSearch().getItemDate().isEmpty()) {
             Instant itemInstant = Instant.parse(request.getSearch().getItemDate());
             LocalDate itemDate = itemInstant.atZone(ZoneOffset.UTC).toLocalDate();
-            Instant startOfItemDay = itemDate.atStartOfDay(ZoneOffset.ofHours(7)).toInstant();
-            Instant endOfItemDay = itemDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.ofHours(7)).toInstant();
+            Instant startOfItemDay = itemDate.atStartOfDay(ZoneOffset.UTC).toInstant();
+            Instant endOfItemDay = itemDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.UTC).toInstant();
 
-            String startOfItemDayStr = formatter.format(startOfItemDay);
-            String endOfItemDayStr = formatter.format(endOfItemDay);
+            String startOfItemDayStr = noZoneFormatter.format(startOfItemDay);
+            String endOfItemDayStr = noZoneFormatter.format(endOfItemDay);
 
             itemDateSearch = String.format("{ $match: { \"item_date\": { $gte: '%s', $lt: '%s' } } }",
                     startOfItemDayStr, endOfItemDayStr);

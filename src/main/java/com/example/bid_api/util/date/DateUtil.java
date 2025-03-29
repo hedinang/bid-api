@@ -52,7 +52,7 @@ public class DateUtil {
 
     public static String formatStringToDate(String date, String format) {
         SimpleDateFormat inputFormat = new SimpleDateFormat(format, Locale.ENGLISH);
-        SimpleDateFormat mongoFormat = new SimpleDateFormat("HH:mm:ss yyyy-MM-dd", Locale.ENGLISH);
+        SimpleDateFormat mongoFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
         Date parsedDate = null;
         try {
             parsedDate = inputFormat.parse(date);
