@@ -4,6 +4,7 @@ import com.example.bid_api.model.dto.OrderDto;
 import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.ChangeStatusRequest;
 import com.example.bid_api.model.request.OrderRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.search.OrderSearch;
@@ -41,5 +42,17 @@ public class OrderController {
     @PostMapping("/order-list")
     public BaseResponse<Page<OrderDto>> getUserList(@RequestBody PageRequest<OrderSearch> request, @AuthenticationPrincipal User user) {
         return Response.toData(orderService.getOrderList(request, user));
+    }
+
+    @PostMapping("/order-date/change-status")
+    public BaseResponse changeStatusByOrderDate(@RequestBody ChangeStatusRequest request, @AuthenticationPrincipal User user) {
+        orderService.changeStatusByOrderDate(request, user);
+        return null;
+    }
+
+    @PostMapping("/item-date/change-status")
+    public BaseResponse changeStatusByItemDate(@RequestBody ChangeStatusRequest request, @AuthenticationPrincipal User user) {
+        orderService.changeStatusByItemDate(request, user);
+        return null;
     }
 }

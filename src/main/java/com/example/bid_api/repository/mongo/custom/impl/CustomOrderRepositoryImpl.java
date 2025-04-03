@@ -1,11 +1,10 @@
 package com.example.bid_api.repository.mongo.custom.impl;
 
-import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.ChangeStatusRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.search.OrderSearch;
-import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.repository.mongo.custom.CustomOrderRepository;
 import com.example.bid_api.util.StringUtil;
 import com.example.bid_api.util.constant.RoleType;
@@ -13,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -20,10 +22,8 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -32,7 +32,8 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
     private final MongoTemplate mongoTemplate;
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ISO_INSTANT;
-    private final DateTimeFormatter noZoneFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);;
+    private final DateTimeFormatter noZoneFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
+    ;
 
     public List<Order> getOrderList(PageRequest<OrderSearch> request, User user) {
         String userId = null;
@@ -148,8 +149,8 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
         if (request != null && request.getOrderDate() != null && !request.getOrderDate().isEmpty()) {
             Instant orderInstant = Instant.parse(request.getOrderDate());
             LocalDate orderDate = orderInstant.atZone(ZoneOffset.UTC).toLocalDate();
-            Instant startOfOrderDay = orderDate.atStartOfDay(ZoneOffset.UTC).toInstant();
-            Instant endOfOrderDay = orderDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.UTC).toInstant();
+            Instant startOfOrderDay = orderDate.atStartOfDay(ZoneOffset.ofHours(7)).toInstant();
+            Instant endOfOrderDay = orderDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.ofHours(7)).toInstant();
 
             String startOfOrderDayStr = formatter.format(startOfOrderDay);
             String endOfOrderDayStr = formatter.format(endOfOrderDay);
@@ -185,6 +186,54 @@ public class CustomOrderRepositoryImpl implements CustomOrderRepository {
             return 0L;
         } else {
             return Long.valueOf(totalItem.get("total"));
+        }
+    }
+
+    @Override
+    public void updateOrderDate(ChangeStatusRequest request) {
+        try {
+            Instant orderInstant = Instant.parse(request.getDate());
+            LocalDate orderDate = orderInstant.atZone(ZoneOffset.UTC).toLocalDate();
+            Instant startOfOrderDay = orderDate.atStartOfDay(ZoneOffset.ofHours(7)).toInstant();
+            Instant endOfOrderDay = orderDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.ofHours(7)).toInstant();
+
+            String startOfOrderDayStr = formatter.format(startOfOrderDay);
+            String endOfOrderDayStr = formatter.format(endOfOrderDay);
+
+            Query query = new Query(Criteria.where("updated_at").gte(startOfOrderDayStr).lt(endOfOrderDayStr));
+
+            if (request.getTargetType() != null && !request.getTargetType().isEmpty()) {
+                query.addCriteria(Criteria.where("type").is(request.getTargetType()));
+            }
+
+            Update update = new Update().set("type", request.getDestinationType());
+            mongoTemplate.updateMulti(query, update, Order.class);
+        } catch (Exception e) {
+            log.error("Error while deleting files: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void updateItemDate(ChangeStatusRequest request) {
+        try {
+            Instant itemInstant = Instant.parse(request.getDate());
+            LocalDate itemDate = itemInstant.atZone(ZoneOffset.UTC).toLocalDate();
+            Instant startOfItemDay = itemDate.atStartOfDay(ZoneOffset.ofHours(7)).toInstant();
+            Instant endOfItemDay = itemDate.atTime(23, 59, 59, 999_999_999).atZone(ZoneOffset.ofHours(7)).toInstant();
+
+            String startOfItemDayStr = noZoneFormatter.format(startOfItemDay);
+            String endOfItemDayStr = noZoneFormatter.format(endOfItemDay);
+
+            Query query = new Query(Criteria.where("item_date").gte(startOfItemDayStr).lt(endOfItemDayStr));
+
+            if (request.getTargetType() != null && !request.getTargetType().isEmpty()) {
+                query.addCriteria(Criteria.where("type").is(request.getTargetType()));
+            }
+
+            Update update = new Update().set("type", request.getDestinationType());
+            mongoTemplate.updateMulti(query, update, Order.class);
+        } catch (Exception e) {
+            log.error("Error while deleting files: {}", e.getMessage());
         }
     }
 }

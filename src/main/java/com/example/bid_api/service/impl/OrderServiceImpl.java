@@ -2,17 +2,16 @@ package com.example.bid_api.service.impl;
 
 import com.example.bid_api.configuration.ThreadPoolConfig;
 import com.example.bid_api.mapper.OrderMapper;
-import com.example.bid_api.model.dto.ItemDto;
 import com.example.bid_api.model.dto.OrderDto;
 import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.entity.Item;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.ChangeStatusRequest;
 import com.example.bid_api.model.request.OrderRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.search.OrderSearch;
-import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.repository.mongo.BidRepository;
 import com.example.bid_api.repository.mongo.ItemRepository;
 import com.example.bid_api.repository.mongo.OrderRepository;
@@ -20,18 +19,17 @@ import com.example.bid_api.repository.mongo.UserRepository;
 import com.example.bid_api.service.OrderService;
 import com.example.bid_api.util.StringUtil;
 import com.example.bid_api.util.constant.OrderStepType;
-import com.example.bid_api.util.constant.RoleType;
 import com.example.bid_api.util.date.DateUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -183,5 +181,13 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             log.error("Error sending mail: " + e.getMessage());
         }
+    }
+
+    public void changeStatusByOrderDate(ChangeStatusRequest request, User user) {
+        orderRepository.updateOrderDate(request);
+    }
+
+    public void changeStatusByItemDate(ChangeStatusRequest request, User user) {
+        orderRepository.updateItemDate(request);
     }
 }
