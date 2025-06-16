@@ -81,8 +81,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         threadPoolConfig.getMailThreadPool().execute(() -> sendEmail(mainEmailAddress, "Stjtrading Order",
-                String.format("User: %s - %s đã đặt 1 order với : %s - %s", user.getUsername(),
-                        user.getName(), item.getItemId(), item.getTitle())));
+                String.format("User: %s - %s đã đặt 1 order với : %s - %s và giá là: %d", user.getUsername(),
+                        user.getName(), item.getItemId(), item.getTitle(), request.getBidPrice())));
         return orderRepository.save(order);
     }
 

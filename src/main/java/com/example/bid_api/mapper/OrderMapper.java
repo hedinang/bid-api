@@ -5,6 +5,7 @@ import com.example.bid_api.model.entity.Item;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.request.OrderRequest;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface OrderMapper {
@@ -12,5 +13,6 @@ public interface OrderMapper {
 
     OrderDto orderToOrderDto(Order order);
 
+    @Mapping(target = "id", ignore = true)
     Order itemToOrder(Item item);
 }
