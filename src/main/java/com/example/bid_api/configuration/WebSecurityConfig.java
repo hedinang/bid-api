@@ -115,6 +115,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/upload/**").permitAll()
                         .requestMatchers("/api/bid/public/**").permitAll()
                         .requestMatchers("/api/item/public/**").permitAll()
+                        .requestMatchers("/api/mail/send").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .requestMatchers("/").authenticated()
                         .requestMatchers("/script/**").permitAll()
