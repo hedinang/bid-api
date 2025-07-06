@@ -5,7 +5,10 @@ import com.example.bid_api.model.entity.User;
 import com.example.bid_api.repository.mongo.UserRepository;
 import com.example.bid_api.util.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.apache.catalina.connector.Connector;
 import org.hibernate.service.spi.ServiceException;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
@@ -125,5 +128,18 @@ public class WebSecurityConfig {
                 .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public WebServerFactoryCustomizer<TomcatServletWebServerFactory> servletContainer() {
+        return factory -> factory.addAdditionalTomcatConnectors(createHttpConnector());
+    }
+
+    private Connector createHttpConnector() {
+        Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
+        connector.setScheme("http");
+        connector.setPort(8000);  // Set the port for HTTP
+        connector.setSecure(false);
+        return connector;
     }
 }
