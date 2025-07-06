@@ -23,7 +23,7 @@ public class MailController {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", mailService.store(request));
     }
 
-    @GetMapping("/delete")
+    @PostMapping("/delete")
     public BaseResponse<Mail> delete(@RequestBody Mail request, @AuthenticationPrincipal User user) {
         mailService.delete(request);
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", null);

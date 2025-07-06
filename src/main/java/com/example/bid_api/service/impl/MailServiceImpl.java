@@ -5,6 +5,7 @@ import com.example.bid_api.model.request.MessageRequest;
 import com.example.bid_api.repository.mongo.MailRepository;
 import com.example.bid_api.service.MailService;
 import com.example.bid_api.util.StringUtil;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.MailSender;
@@ -28,13 +29,13 @@ public class MailServiceImpl implements MailService {
             return mailRepository.save(mail);
         } else {
             Mail mail = mailRepository.findByMailId(request.getMailId());
-            mail.setMailId(StringUtil.generateId());
+            mail.setAddress(request.getAddress());
             return mailRepository.save(mail);
         }
     }
 
     public void delete(Mail request) {
-        mailRepository.deleteById(request.getMailId());
+        mailRepository.deleteByMailId(request.getMailId());
     }
 
     public List<Mail> getList() {

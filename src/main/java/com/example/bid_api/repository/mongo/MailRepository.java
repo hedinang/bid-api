@@ -5,4 +5,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface MailRepository extends MongoRepository<Mail, String> {
     Mail findByMailId(String mailId);
+
+    void deleteByMailId(String mailId);
 }
