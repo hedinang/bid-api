@@ -63,7 +63,7 @@ public class OrderServiceImpl implements OrderService {
             }
 
             order.setBidPrice(request.getBidPrice());
-            order.setType(request.getType());
+            order.setType(OrderStepType.ORDER.toString());
             order.setUpdatedAt(DateUtil.formatDateTime(new Date()));
         } else {
             order = orderMapper.itemToOrder(item);
