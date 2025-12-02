@@ -18,7 +18,6 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
@@ -230,7 +229,8 @@ public class BidServiceImpl implements BidService {
             closedBids.forEach(closedBid -> closedBid.setClosed(true));
 
             List<Bid> needingStoreBids = new ArrayList<>(bids.stream().map(bid -> {
-                int totalItem = getTotalItem(bid.getDetailUrl());
+                // temporarily store &master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4
+                int totalItem = getTotalItem(bid.getDetailUrl() + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4");
 
                 if (existedDetailUrls.contains(bid.getDetailUrl())) {
                     Bid existedBid = existedMap.get(bid.getDetailUrl());
@@ -335,7 +335,7 @@ public class BidServiceImpl implements BidService {
 
     private void syncItem(String clientUrl, int page, Bid bid) {
         try {
-            itemDriver.get(clientUrl + "&page=" + page);
+            itemDriver.get(clientUrl + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4" + "&page=" + page);
             log.info("Start extract: {}-{}-{}", bid.getBidId(), bid.getBidStatus(), page);
 
             List<WebElement> webElements = itemDriver.findElements(By.className("card"));
