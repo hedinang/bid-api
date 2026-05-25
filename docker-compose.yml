@@ -1,0 +1,16 @@
+#winitech eco system
+version: "3.8"
+
+services:
+  auth-api:
+    image: winitechvina/bid-api
+    container_name: bid-api
+    ports:
+      - "7000:7000"
+      - "8000:8000"
+    volumes:
+      - bid-api:/bid-api
+    restart: always
+
+volumes:
+  bid-api:

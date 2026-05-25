@@ -10,4 +10,6 @@ public interface CustomUserRepository {
     List<User> getUserList(PageRequest<UserSearch> request);
 
     long countUserList(UserSearch request);
+
+    boolean updateAvatarByUserId(String userId, String avatar);
 }

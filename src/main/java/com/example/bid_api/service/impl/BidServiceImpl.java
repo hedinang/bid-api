@@ -58,104 +58,6 @@ public class BidServiceImpl implements BidService {
         return bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
     }
 
-//    @Override
-//    @Transactional
-//    public void storeBid() {
-//        if (threadMap.containsKey("store-bid")) {
-//            System.out.println("bid getting is already running.");
-//            return;
-//        }
-//
-//        Thread thread = new Thread(() -> {
-//            try {
-//                while (!Thread.currentThread().isInterrupted()) {
-//                    try {
-//                        System.setProperty("webdriver.chrome.driver", chromeDriver);
-//                        String clientUrl = "https://www.ecoauc.com/client";
-//                        // Initialize WebDriver with Chrome options
-//                        ChromeOptions options = new ChromeOptions();
-//                        driver = new ChromeDriver(options);
-//                        driver.manage().window().setSize(new Dimension(2400, 2000));
-//                        driver.get(clientUrl);
-//                        driver.manage().addCookie(new Cookie("CAKEPHP", getToken());
-//                        driver.get(clientUrl);
-//                        List<WebElement> webElements = driver.findElements(By.className("slick-slide"));
-//                        List<Bid> bids = new ArrayList<>();
-//
-//                        for (WebElement webElement : webElements) {
-//                            if (extractDateTime(webElement) == null) continue;
-//                            Bid bid = new Bid();
-//                            bid.setBidStatus(extractBidStatus(webElement));
-//                            bid.setHeaderIcon(extractIconUrl(webElement));
-//                            bid.setTimeStatus(extractTimeStatus(webElement));
-//                            String detailUrl = extractDetailUrl(webElement);
-//                            String startPreviewTime = extractStartTime(webElement);
-//                            String endPreviewTime = extractEndTime(webElement);
-//                            String openDate = extractDateTime(webElement);
-//
-//                            URL url = new URL(detailUrl);
-//                            String query = url.getQuery();
-//                            Map<String, String> queryParams = StringUtil.getQueryParams(query);
-//                            String bidId = queryParams.get("auctions");
-//                            bid.setDetailUrl(detailUrl);
-//                            bid.setBidId(bidId);
-//
-//                            if (startPreviewTime != null) {
-//                                startPreviewTime = startPreviewTime.replace("〜", "").trim();
-//                                bid.setStartPreviewTime(DateUtil.formatStringToDate(startPreviewTime, "MMM,dd,yyyy HH:mm"));
-//                            }
-//
-//                            if (endPreviewTime != null) {
-//                                endPreviewTime = endPreviewTime.replace("〜", "").trim();
-//                                bid.setEndPreviewTime(DateUtil.formatStringToDate(endPreviewTime, "MMM,dd,yyyy HH:mm"));
-//                            }
-//
-//                            if (openDate != null) {
-//                                openDate = openDate.replace("〜", "").trim();
-//                                bid.setOpenTime(DateUtil.formatStringToDate(openDate, "MMM,dd,yyyy HH:mm"));
-//                            }
-//
-//                            bid.setDonePage(0);
-//                            bid.setSynchronizing(false);
-//                            bids.add(bid);
-//                        }
-//
-//                        List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
-//                        List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
-//                        List<String> bidIds = bids.stream().map(Bid::getBidId).toList();
-//                        List<Bid> closedBids = bidRepository.findByClosedAndBidIdNotIn(false, bidIds);
-//                        closedBids.forEach(closedBid -> closedBid.setClosed(true));
-//                        bidRepository.saveAll(closedBids);
-//
-//                        List<Bid> newBids = bids.stream().filter(bid -> !existedDetailUrls.contains(bid.getDetailUrl())).toList();
-//
-//                        if (newBids.isEmpty()) {
-//                            return;
-//                        }
-//
-//                        for (Bid newBid : newBids) {
-//                            int totalItem = getTotalItem(newBid.getDetailUrl());
-//                            newBid.setTotalItem(totalItem);
-//                        }
-//                        bidRepository.saveAll(newBids);
-//                    } catch (Exception e) {
-//                        log.error(e.toString());
-//                    }
-//
-//                    driver.quit();
-//                    log.info("Get and store successfully bid");
-//                    Thread.sleep(1000); // Simulate work
-//                }
-//            } catch (InterruptedException e) {
-//                log.error("bid getting was interrupted.");
-//            }
-//        });
-//
-//        thread.setName("store-bid");
-//        threadMap.put("store-bid", thread);
-//        thread.start();
-//    }
-
     @Override
     @Transactional
     public void storeBid() {
@@ -167,9 +69,6 @@ public class BidServiceImpl implements BidService {
             options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
             options.addArguments("--disable-gpu", "--remote-allow-origins=*");
             options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-//            proxy.setSocksProxy("127.0.0.1:9050");
-//            proxy.setSocksVersion(5);
-//            options.setProxy(proxy);
 
             bidDriver = new ChromeDriver(options);
             bidDriver.manage().window().setSize(new Dimension(2400, 2000));

@@ -5,10 +5,14 @@ import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.repository.mongo.custom.CustomUserRepository;
 import com.example.bid_api.util.StringUtil;
+import com.mongodb.client.result.UpdateResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -72,5 +76,15 @@ public class CustomUserRepositoryImpl implements CustomUserRepository {
         } else {
             return Long.valueOf(totalItem.get("total"));
         }
+    }
+
+    public boolean updateAvatarByUserId(String userId, String avatar) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("userId").is(userId));
+        Update update = new Update();
+        update.set("avatar", avatar);
+
+        UpdateResult result = mongoTemplate.updateFirst(query, update, User.class);
+        return result.getModifiedCount() > 0;
     }
 }

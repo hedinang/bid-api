@@ -27,6 +27,9 @@ public class User extends MongoBaseEntity {
     @Field(name = "password")
     private String password;
 
+    // resourceId of avatar
+    private String avatar;
+
     @Field(name = "name")
     private String name;
 

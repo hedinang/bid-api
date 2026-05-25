@@ -114,15 +114,15 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     public User update(UserRequest request) {
-        if (request.getUserId() == null || request.getUsername() == null || request.getRole() == null || request.getPassword() == null)
+        if (request.getName() == null || request.getUserId() == null)
             return null;
         User user = userRepository.findByUserId(request.getUserId()).orElseGet(null);
 
         if (user == null) throw new ServiceException(ErrorCode.E404.code(), "User not found");
 
-        user.setUsername(request.getUsername());
-        user.setPassword(request.getPassword());
-        user.setRole(request.getRole());
+        user.setName(request.getName());
+        user.setPhone(request.getPhone());
+        user.setEmail(request.getEmail());
         return userRepository.save(user);
     }
 
