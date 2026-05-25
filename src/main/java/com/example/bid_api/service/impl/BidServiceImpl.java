@@ -42,6 +42,12 @@ public class BidServiceImpl implements BidService {
     @Value("${chrome-driver}")
     String chromeDriver;
 
+    @Value("${bid-email-address}")
+    String bidEmailAddress;
+
+    @Value("${bid-email-password}")
+    String bidEmailPass;
+
     @Override
     public List<Bid> getList() {
         return bidRepository.findByClosed(false);
@@ -535,8 +541,8 @@ public class BidServiceImpl implements BidService {
             Connection.Response loginResponse = Jsoup.connect(loginUrl)
                     .cookie("csrfToken", "bfb9dce0e28af1531cee77027f2d6c6ef072ad499ceccac44484b24909cfa94688723585a66072a423b18a7f8c3beb023400032fb7dad89ffc32d13f842ab14b")
                     .data("_csrfToken", "bfb9dce0e28af1531cee77027f2d6c6ef072ad499ceccac44484b24909cfa94688723585a66072a423b18a7f8c3beb023400032fb7dad89ffc32d13f842ab14b")
-                    .data("email_address", "gavip13051995@gmail.com")
-                    .data("password", "Tungduong2024")
+                    .data("email_address", bidEmailAddress)
+                    .data("password", bidEmailPass)
                     .data("remember-me", "remember-me")
                     .method(Connection.Method.POST)
                     .execute();
