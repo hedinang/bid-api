@@ -20,8 +20,6 @@ ENV CHROMEDRIVER=/usr/lib/chromium/chromedriver
 ENV PATH=$PATH:/usr/lib/chromium/
 
 # Copy the JAR file and other required files into the container
-COPY jks.jks ssl/jks.jks
-COPY keystore.p12 ssl/keystore.p12
 COPY target/bid-api-0.0.1-SNAPSHOT.jar target.jar
 
 # Verify Chromium and Chromedriver versions (optional, for debugging)
