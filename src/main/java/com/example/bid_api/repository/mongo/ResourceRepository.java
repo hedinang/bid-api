@@ -14,5 +14,5 @@ public interface ResourceRepository extends MongoRepository<Resource, String>, C
 
     List<Resource> findAllByRequestUuidOrderByChunkIndexAsc(String requestUuid);
 
-    Optional<Resource> findFirstByResourceId(String resourceId);
+    Resource findFirstByResourceId(String resourceId);
 }
