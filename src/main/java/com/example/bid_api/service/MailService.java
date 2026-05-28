@@ -13,4 +13,6 @@ public interface MailService {
     List<Mail> getList();
 
     void sendEmail(MessageRequest request);
+
+    void pollEmail();
 }

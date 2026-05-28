@@ -20,7 +20,11 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -161,6 +165,186 @@ public class BidServiceImpl implements BidService {
 
         bidDriver.quit();
         log.info("Get and store successfully bid");
+    }
+
+    @Override
+    @Transactional
+    public void storeBidV2() {
+        String url =
+                "https://www.ecoauc.com/client";
+
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Cookie", "CAKEPHP=" + getToken())
+                .header("User-Agent", "Mozilla/5.0")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .GET()
+                .build();
+        try {
+            HttpResponse<String> response = client.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+            String html = response.body();
+
+            List<Bid> bids = extractAuctionItems(html);
+
+            List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
+            Map<String, Bid> existedMap = existedBids.stream().collect(Collectors.toMap(Bid::getDetailUrl, bid -> bid, (a, b) -> a));
+
+            List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
+            List<String> bidIds = bids.stream().map(Bid::getBidId).toList();
+            List<Bid> closedBids = bidRepository.findByClosedAndBidIdNotIn(false, bidIds);
+            closedBids.forEach(closedBid -> closedBid.setClosed(true));
+
+            List<Bid> needingStoreBids = new ArrayList<>(bids.stream().map(bid -> {
+                // temporarily store &master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4
+                int totalItem = getTotalItemV2(bid.getDetailUrl() + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4");
+
+
+                if (existedDetailUrls.contains(bid.getDetailUrl())) {
+                    Bid existedBid = existedMap.get(bid.getDetailUrl());
+                    int pages = (int) Math.ceil((double) totalItem / 50);
+                    int oldPages = (int) Math.ceil((double) existedBid.getTotalItem() / 50);
+                    existedBid.setDonePage(existedBid.getDonePage() + pages - oldPages);
+                    existedBid.setTotalItem(totalItem);
+                    return existedBid;
+                }
+
+                bid.setTotalItem(totalItem);
+
+                int pages = (int) Math.ceil((double) totalItem / 50);
+                bid.setDonePage(pages);
+                return bid;
+            }).toList());
+
+            needingStoreBids.addAll(closedBids);
+            bidRepository.saveAll(needingStoreBids);
+        } catch (Exception e) {
+            log.error(e.toString());
+        }
+    }
+
+    public static List<Bid> extractAuctionItems(String html) {
+        List<Bid> result = new ArrayList<>();
+
+        Pattern cardPattern = Pattern.compile(
+                "<div\\s*>\\s*" +
+                        "<a\\s+href=\"([^\"]+)\"\\s+class=\"all-link\"></a>" +
+                        "(.*?)" +
+                        "<div class=\"top-auction-card-detail\">(.*?)</div>\\s*" +
+                        "<div class=\"auction-text\"></div>\\s*</div>",
+                Pattern.DOTALL
+        );
+
+        Matcher cardMatcher = cardPattern.matcher(html);
+
+        while (cardMatcher.find()) {
+            String link = cleanHtml(cardMatcher.group(1));
+            String beforeDetail = cardMatcher.group(2);
+            String card = cardMatcher.group(3);
+
+            Bid bid = new Bid();
+
+            bid.setDetailUrl(toAbsoluteUrl(link));
+
+            bid.setBidId(extractAuctionId(bid.getDetailUrl()));
+
+            bid.setTimeStatus(extract(
+                    card,
+                    "<span>\\s*(Realtime|Time-limited|リアルタイム|タイムリミット)\\s*</span>"
+            ));
+
+            bid.setBidStatus(extract(
+                    beforeDetail,
+                    "<span[^>]*>\\s*(Preview possible|In session|下見可能|開催中)\\s*</span>"
+            ));
+
+            bid.setStartPreviewTime(
+                    StringUtil.convertEcoDate(
+                            extract(
+                                    card,
+                                    "Preview：?\\s*</span>\\s*<div class=\"box\">\\s*<span>\\s*(.*?)\\s*〜"
+                            )));
+
+            bid.setEndPreviewTime(StringUtil.convertEcoDate(extract(
+                    card,
+                    "Preview：?\\s*</span>\\s*<div class=\"box\">\\s*<span>.*?〜\\s*</span>\\s*<span>\\s*(.*?)\\s*</span>"
+            )));
+
+            bid.setOpenTime(StringUtil.convertEcoDate(extract(
+                    card,
+                    "<span class=\"datetime\">\\s*(.*?)\\s*</span>"
+            )));
+
+            result.add(bid);
+        }
+
+        return result;
+    }
+
+    private static String extract(String text, String regex) {
+        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(text);
+
+        if (!matcher.find()) return "";
+
+        return cleanHtml(matcher.group(1));
+    }
+
+    private static String cleanHtml(String value) {
+        if (value == null) return "";
+
+        return value
+                .replaceAll("<[^>]+>", "")
+                .replace("&amp;", "&")
+                .replace("&yen;", "¥")
+                .replace("&nbsp;", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private static String toAbsoluteUrl(String link) {
+        if (link == null || link.isBlank()) return "";
+
+        link = link.replace("&amp;", "&");
+
+        if (link.startsWith("http")) {
+            return link;
+        }
+
+        return "https://www.ecoauc.com" + link;
+    }
+
+    public static String extractAuctionId(String url) {
+
+        Pattern pattern =
+                Pattern.compile("[?&]auctions=(\\d+)");
+
+        Matcher matcher = pattern.matcher(url);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        return "0";
+    }
+
+    public static int extractTotal(String text) {
+        Pattern pattern = Pattern.compile("Showing\\s+([\\d,]+)\\s+of");
+        Matcher matcher = pattern.matcher(text);
+
+        if (matcher.find()) {
+            return Integer.parseInt(
+                    matcher.group(1).replace(",", "")
+            );
+        }
+
+        return 0;
     }
 
     @Override
@@ -352,6 +536,31 @@ public class BidServiceImpl implements BidService {
             bidDriver.get(clientUrl);
             WebElement e = bidDriver.findElement(By.className("form-control-static"));
             return extractTotalItem(e.getText());
+        } catch (Exception e) {
+            log.error(e.toString());
+            return 0;
+        }
+    }
+
+    public int getTotalItemV2(String clientUrl) {
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(clientUrl))
+                .header("Cookie", "CAKEPHP=" + getToken())
+                .header("User-Agent", "Mozilla/5.0")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .GET()
+                .build();
+        try {
+            HttpResponse<String> response = client.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+            String html = response.body();
+            return extractTotal(html);
         } catch (Exception e) {
             log.error(e.toString());
             return 0;

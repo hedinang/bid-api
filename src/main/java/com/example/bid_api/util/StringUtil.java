@@ -7,6 +7,8 @@ import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
 import java.net.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class StringUtil {
@@ -136,5 +138,31 @@ public class StringUtil {
             }
         }
         return queryParams;
+    }
+
+    public static String convertEcoDate(String input) {
+
+        if (input == null || input.isBlank()) {
+            return "";
+        }
+
+        // bỏ ký tự 〜
+        input = input.replace("〜", "").trim();
+
+        DateTimeFormatter inputFormat =
+                DateTimeFormatter.ofPattern(
+                        "MMM,dd,yyyy HH:mm",
+                        Locale.ENGLISH
+                );
+
+        DateTimeFormatter outputFormat =
+                DateTimeFormatter.ofPattern(
+                        "yyyy-MM-dd HH:mm:ss"
+                );
+
+        LocalDateTime dateTime =
+                LocalDateTime.parse(input, inputFormat);
+
+        return dateTime.format(outputFormat);
     }
 }

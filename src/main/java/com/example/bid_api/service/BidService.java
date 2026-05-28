@@ -16,7 +16,11 @@ public interface BidService {
 
     void storeBid();
 
+    void storeBidV2();
+
     void syncBid(BidRequest bidRequest);
+
+//    void syncBidV2(BidRequest bidRequest);
 
     Set<String> listThread();
 
