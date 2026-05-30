@@ -52,6 +52,6 @@ public class Item extends MongoBaseEntity {
     @Field(name = "category")
     private String category;
 
-    @Field(name = "branch")
-    private String branch;
+    @Field(name = "brand")
+    private String brand;
 }

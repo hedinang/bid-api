@@ -170,63 +170,44 @@ public class BidServiceImpl implements BidService {
     @Override
     @Transactional
     public void storeBidV2() {
-        String url =
-                "https://www.ecoauc.com/client";
+        String html = cloneHtml("https://www.ecoauc.com/client");
 
-        HttpClient client = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Cookie", "CAKEPHP=" + getToken())
-                .header("User-Agent", "Mozilla/5.0")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .GET()
-                .build();
-        try {
-            HttpResponse<String> response = client.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString()
-            );
-            String html = response.body();
-
-            List<Bid> bids = extractAuctionItems(html);
-
-            List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
-            Map<String, Bid> existedMap = existedBids.stream().collect(Collectors.toMap(Bid::getDetailUrl, bid -> bid, (a, b) -> a));
-
-            List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
-            List<String> bidIds = bids.stream().map(Bid::getBidId).toList();
-            List<Bid> closedBids = bidRepository.findByClosedAndBidIdNotIn(false, bidIds);
-            closedBids.forEach(closedBid -> closedBid.setClosed(true));
-
-            List<Bid> needingStoreBids = new ArrayList<>(bids.stream().map(bid -> {
-                // temporarily store &master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4
-                int totalItem = getTotalItemV2(bid.getDetailUrl() + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4");
-
-
-                if (existedDetailUrls.contains(bid.getDetailUrl())) {
-                    Bid existedBid = existedMap.get(bid.getDetailUrl());
-                    int pages = (int) Math.ceil((double) totalItem / 50);
-                    int oldPages = (int) Math.ceil((double) existedBid.getTotalItem() / 50);
-                    existedBid.setDonePage(existedBid.getDonePage() + pages - oldPages);
-                    existedBid.setTotalItem(totalItem);
-                    return existedBid;
-                }
-
-                bid.setTotalItem(totalItem);
-
-                int pages = (int) Math.ceil((double) totalItem / 50);
-                bid.setDonePage(pages);
-                return bid;
-            }).toList());
-
-            needingStoreBids.addAll(closedBids);
-            bidRepository.saveAll(needingStoreBids);
-        } catch (Exception e) {
-            log.error(e.toString());
+        if (html == null || html.isEmpty()) {
+            return;
         }
+
+        List<Bid> bids = extractAuctionItems(html);
+
+        List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
+        Map<String, Bid> existedMap = existedBids.stream().collect(Collectors.toMap(Bid::getDetailUrl, bid -> bid, (a, b) -> a));
+
+        List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
+        List<String> bidIds = bids.stream().map(Bid::getBidId).toList();
+        List<Bid> closedBids = bidRepository.findByClosedAndBidIdNotIn(false, bidIds);
+        closedBids.forEach(closedBid -> closedBid.setClosed(true));
+
+        List<Bid> needingStoreBids = new ArrayList<>(bids.stream().map(bid -> {
+            // temporarily store &master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4
+            int totalItem = getTotalItemV2(bid.getDetailUrl() + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4");
+
+            if (existedDetailUrls.contains(bid.getDetailUrl())) {
+                Bid existedBid = existedMap.get(bid.getDetailUrl());
+                int pages = (int) Math.ceil((double) totalItem / 50);
+                int oldPages = (int) Math.ceil((double) existedBid.getTotalItem() / 50);
+                existedBid.setDonePage(existedBid.getDonePage() + pages - oldPages);
+                existedBid.setTotalItem(totalItem);
+                return existedBid;
+            }
+
+            bid.setTotalItem(totalItem);
+
+            int pages = (int) Math.ceil((double) totalItem / 50);
+            bid.setDonePage(pages);
+            return bid;
+        }).toList());
+
+        needingStoreBids.addAll(closedBids);
+        bidRepository.saveAll(needingStoreBids);
     }
 
     public static List<Bid> extractAuctionItems(String html) {
@@ -418,6 +399,57 @@ public class BidServiceImpl implements BidService {
         thread.start();
     }
 
+    public void syncBidV2(BidRequest bidRequest) {
+        if (threadMap.containsKey("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus())) {
+            System.out.println("bid getting is already running.");
+            return;
+        }
+
+        Thread thread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                Bid bid = bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
+
+                for (int page = bid.getDonePage(); page > 0; page--) {
+                    List<String> itemUrls = syncItemV2(bid.getDetailUrl(), 1);
+                    List<Item> itemList = itemUrls.stream().map(url -> {
+                        Item item = new Item();
+                        item.setBidId(bid.getBidId());
+                        item.setBidStatus(bid.getBidStatus());
+                        item.setItemUrl(url);
+
+                        String html = cloneHtml(url);
+
+                        if (html != null && !html.isEmpty()) {
+                            item.setDetailUrls(extractImageUrls(html));
+                            item.setItemId(extractItemNo(html));
+                            item.setTitle(extractTitle(html));
+                            item.setDescription(extractNotes(html));
+                            item.setRank(extractRank(html));
+                            item.setBrand(extractBrand(html));
+                            item.setStartPrice(extractStartingPrice(html));
+                            item.setCategory(extractCategory(html));
+                        }
+
+                        return item;
+                    }).toList();
+
+                    List<String> existedItemIds = itemRepository.findByBidIdIn(itemList.stream().map(Item::getBidId).toList()).stream().map(Item::getBidId).toList();
+                    List<Item> newItems = itemList.stream().filter(i -> !existedItemIds.contains(i.getItemId())).toList();
+                    itemRepository.saveAll(newItems);
+                    bid.setDonePage(page - 1);
+                    bidRepository.save(bid);
+                }
+
+                stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
+                return;
+            }
+        });
+
+        thread.setName("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
+        threadMap.put("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus(), thread);
+        thread.start();
+    }
+
     public Set<String> listThread() {
         return threadMap.keySet();
     }
@@ -437,10 +469,10 @@ public class BidServiceImpl implements BidService {
                 String itemDetailUrl = we.findElement(By.tagName("a")).getAttribute("href");
                 List<WebElement> basicInfo = we.findElements(By.tagName("li"));
                 item.setRank(basicInfo.get(0).getText().split("\n")[1]);
-                item.setStartPrice(basicInfo.get(1).getText().split("\n")[1]);
+//                item.setStartPrice(basicInfo.get(1).getText().split("\n")[1]);
                 item.setAuctionOrder(basicInfo.get(2).getText().split("\n")[1]);
 
-                item.setBranch(we.findElement(By.tagName("small")).getText());
+                item.setBrand(we.findElement(By.tagName("small")).getText());
                 item.setItemUrl(itemDetailUrl);
                 item.setTitle(we.findElement(By.tagName("b")).getText());
 //                item.setItemId(extractItemId(itemDetailUrl));
@@ -462,6 +494,46 @@ public class BidServiceImpl implements BidService {
 
     }
 
+    private List<String> syncItemV2(String clientUrl, int page) {
+        try {
+            String html = cloneHtml(clientUrl + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4" + "&page=" + page + "&tableType=list");
+
+            if (html == null || html.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<String> itemUrls = extractItemDetailUrls(html).stream().distinct().toList();
+            return itemUrls;
+        } catch (Exception e) {
+            log.error(e.toString());
+            return new ArrayList<>();
+        }
+    }
+
+    public static List<String> extractItemDetailUrls(String html) {
+        List<String> urls = new ArrayList<>();
+
+        Pattern pattern = Pattern.compile(
+                "<a\\s+href=\"([^\"]*/client/auction-items/view/\\d+/[^\"]+)\"",
+                Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        while (matcher.find()) {
+            String url = matcher.group(1)
+                    .replace("&amp;", "&")
+                    .trim();
+
+            if (!url.startsWith("http")) {
+                url = "https://www.ecoauc.com" + url;
+            }
+
+            urls.add(url);
+        }
+
+        return urls;
+    }
 
     private void extractItemDetail(Item item, String itemDetailUrl) {
         try {
@@ -543,28 +615,13 @@ public class BidServiceImpl implements BidService {
     }
 
     public int getTotalItemV2(String clientUrl) {
-        HttpClient client = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
+        String html = cloneHtml(clientUrl);
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(clientUrl))
-                .header("Cookie", "CAKEPHP=" + getToken())
-                .header("User-Agent", "Mozilla/5.0")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .GET()
-                .build();
-        try {
-            HttpResponse<String> response = client.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString()
-            );
-            String html = response.body();
-            return extractTotal(html);
-        } catch (Exception e) {
-            log.error(e.toString());
+        if (html == null || html.isEmpty()) {
             return 0;
         }
+
+        return extractTotal(html);
     }
 
     private int extractTotalItem(String text) {
@@ -701,5 +758,162 @@ public class BidServiceImpl implements BidService {
     @Override
     public void deleteBid(DeleteBidRequest deleteBidRequest) {
         bidRepository.deleteByUniqueId(deleteBidRequest.getUniqueId());
+    }
+
+    /* detail */
+    private List<String> extractImageUrls(String html) {
+        Set<String> urls = new LinkedHashSet<>();
+
+        Pattern pattern = Pattern.compile(
+                "https://resize\\.ecoauc\\.com/images/item/[^\"')?]+\\.jpg"
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        while (matcher.find()) {
+            urls.add(matcher.group());
+        }
+
+        return new ArrayList<>(urls);
+    }
+
+    private String extractItemNo(String html) {
+
+        Pattern pattern = Pattern.compile(
+                "<small>\\s*No\\.(\\d+)\\s*</small>",
+                Pattern.CASE_INSENSITIVE
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        return "";
+    }
+
+    private String extractNotes(String html) {
+
+        Pattern pattern = Pattern.compile(
+                "<p>\\s*\\[Notes\\]\\s*(.*?)\\s*</p>",
+                Pattern.DOTALL | Pattern.CASE_INSENSITIVE
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        if (matcher.find()) {
+            return matcher.group(1)
+                    .replaceAll("<[^>]+>", "")
+                    .trim();
+        }
+
+        return "";
+    }
+
+    public static String extractTitle(String html) {
+
+        Pattern pattern = Pattern.compile(
+                "<small\\s+class=\"show\">.*?</small>\\s*([^<]+)</h2>",
+                Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+
+        return "";
+    }
+
+    public static String extractRank(String html) {
+
+        Pattern pattern = Pattern.compile(
+                "<span\\s+class=\"circle-text\">\\s*([^<]+?)\\s*<small>\\s*Rank\\s*</small>",
+                Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+
+        return "";
+    }
+
+    public static String extractBrand(String html) {
+
+        Pattern pattern = Pattern.compile(
+                "<small\\s+class=\"show\">\\s*(.*?)\\s*</small>",
+                Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+
+        return "";
+    }
+
+    public static String extractStartingPrice(String html) {
+
+        Pattern pattern = Pattern.compile(
+                "<dt>\\s*Starting price\\s*</dt>\\s*<dd>\\s*<big[^>]*>\\s*&yen;\\s*([\\d,]+)",
+                Pattern.DOTALL | Pattern.CASE_INSENSITIVE
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        if (matcher.find()) {
+            return matcher.group(1).replace(",", "");
+        }
+
+        return "0";
+    }
+
+    public static String extractCategory(String html) {
+
+        Pattern pattern = Pattern.compile(
+                "<dt>\\s*Category\\s*</dt>\\s*<dd>(.*?)</dd>",
+                Pattern.DOTALL | Pattern.CASE_INSENSITIVE
+        );
+
+        Matcher matcher = pattern.matcher(html);
+
+        if (matcher.find()) {
+            return matcher.group(1)
+                    .replaceAll("<[^>]+>", "")
+                    .trim();
+        }
+
+        return "";
+    }
+
+    private String cloneHtml(String url) {
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Cookie", "CAKEPHP=" + getToken())
+                .header("User-Agent", "Mozilla/5.0")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .GET()
+                .build();
+        try {
+            HttpResponse<String> response = client.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+            return response.body();
+        } catch (Exception e) {
+            log.error(e.toString());
+            return "";
+        }
     }
 }

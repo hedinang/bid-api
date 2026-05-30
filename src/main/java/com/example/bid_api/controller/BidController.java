@@ -37,15 +37,9 @@ public class BidController {
 
     @PostMapping("sync")
     public BaseResponse sync(@RequestBody BidRequest bidRequest) {
-        bidService.syncBid(bidRequest);
+        bidService.syncBidV2(bidRequest);
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
     }
-
-//    @PostMapping("syncV2")
-//    public BaseResponse syncV2(@RequestBody BidRequest bidRequest) {
-//        bidService.syncBidV2(bidRequest);
-//        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
-//    }
 
     @PostMapping("stop")
     public BaseResponse stopThread(@RequestBody ThreadStopRequest request) {

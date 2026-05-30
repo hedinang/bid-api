@@ -20,7 +20,7 @@ public interface BidService {
 
     void syncBid(BidRequest bidRequest);
 
-//    void syncBidV2(BidRequest bidRequest);
+    void syncBidV2(BidRequest bidRequest);
 
     Set<String> listThread();
 
