@@ -1,4 +1,4 @@
-package com.example.bid_api.controller;
+package com.example.bid_api.controller.secure;
 
 import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.request.BidRequest;
@@ -14,30 +14,20 @@ import java.util.List;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/bid")
+@RequestMapping("/secure/bid")
 @RequiredArgsConstructor
 public class BidController {
     private final BidService bidService;
 
-    @GetMapping("/public/list")
-    public BaseResponse<List<Bid>> list() {
-        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getList());
-    }
-
-    @PostMapping("/public/detail")
-    public BaseResponse<Bid> get(@RequestBody BidRequest bidRequest) {
-        return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getBid(bidRequest));
-    }
-
     @PostMapping("store/bid")
     public BaseResponse storeBid() {
-        bidService.storeBidV2();
+        bidService.storeBid();
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
     }
 
     @PostMapping("sync")
     public BaseResponse sync(@RequestBody BidRequest bidRequest) {
-        bidService.syncBidV2(bidRequest);
+        bidService.syncBid(bidRequest);
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
     }
 

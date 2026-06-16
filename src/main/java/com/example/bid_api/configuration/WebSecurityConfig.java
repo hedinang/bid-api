@@ -23,7 +23,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -112,17 +111,11 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http.cors().and().csrf().disable()
-                .authorizeHttpRequests(req -> req.requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/api/upload/**").permitAll()
-                        .requestMatchers("/api/bid/public/**").permitAll()
-                        .requestMatchers("/api/item/public/**").permitAll()
+                .authorizeHttpRequests(request -> request
+                        .requestMatchers("/secure/**").authenticated()
                         .requestMatchers("/api/mail/send").permitAll()
-                        .requestMatchers("/api/**").authenticated()
-                        .requestMatchers("/").authenticated()
-                        .requestMatchers("/script/**").permitAll()
+                        .requestMatchers("/free/**").permitAll()
                         .requestMatchers(resources).permitAll().anyRequest().permitAll()
                 )
                 .securityContext(context -> context

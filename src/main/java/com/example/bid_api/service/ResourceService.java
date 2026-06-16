@@ -8,9 +8,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.File;
 import java.util.concurrent.CompletableFuture;
 
 public interface ResourceService {
+    File readFile(String resourceId);
+
     boolean uploadProfileImage(UploadFileRequest req, User user);
 
     Resource uploadFileChunk(MultipartFile file, ResourceRequest resourceRequest, User user);

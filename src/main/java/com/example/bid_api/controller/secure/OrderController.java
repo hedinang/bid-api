@@ -1,4 +1,4 @@
-package com.example.bid_api.controller;
+package com.example.bid_api.controller.secure;
 
 import com.example.bid_api.model.dto.OrderDto;
 import com.example.bid_api.model.dto.Page;
@@ -17,7 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/order")
+@RequestMapping("/secure/order")
 @RequiredArgsConstructor
 public class OrderController {
     private final OrderService orderService;

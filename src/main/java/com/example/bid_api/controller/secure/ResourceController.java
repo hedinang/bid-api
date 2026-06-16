@@ -1,4 +1,4 @@
-package com.example.bid_api.controller;
+package com.example.bid_api.controller.secure;
 
 import com.example.bid_api.model.entity.Resource;
 import com.example.bid_api.model.entity.User;
@@ -19,7 +19,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.util.concurrent.CompletableFuture;
 
 @RestController
-@RequestMapping("api/resource")
+@RequestMapping("secure/resource")
 @RequiredArgsConstructor
 @Slf4j
 public class ResourceController {

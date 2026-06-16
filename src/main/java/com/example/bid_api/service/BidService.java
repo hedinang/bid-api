@@ -16,13 +16,11 @@ public interface BidService {
 
     void storeBid();
 
-    void storeBidV2();
-
     void syncBid(BidRequest bidRequest);
-
-    void syncBidV2(BidRequest bidRequest);
 
     Set<String> listThread();
 
     void deleteBid(DeleteBidRequest deleteBidRequest);
+
+    int getTotalItem(String clientUrl);
 }

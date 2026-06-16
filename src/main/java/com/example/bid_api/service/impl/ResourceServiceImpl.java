@@ -19,7 +19,6 @@ import com.example.bid_api.util.response.CustomHttpStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -27,7 +26,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.*;
@@ -36,10 +34,8 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -73,6 +69,15 @@ public class ResourceServiceImpl implements ResourceService {
 
     @Override
     @Transactional
+    public File readFile(String resourceId) {
+        Resource resource = resourceRepository.findFirstByResourceId(resourceId);
+        String subPath = String.format("%s/%s", rootFolder, resource.getPath());
+        Path filePath = Paths.get(subPath);
+        return filePath.toFile();
+    }
+
+    @Override
+    @Transactional
     public boolean uploadProfileImage(UploadFileRequest request, User user) {
         if (user.getAvatar() != null) deleteByResourceId(user.getAvatar());
 
@@ -88,15 +93,13 @@ public class ResourceServiceImpl implements ResourceService {
             String chunkName = resourceRequest.getRequestUuid() + ".part" + resourceRequest.getChunkIndex();
             String date = DateUtil.getNowDateFolder();
 
-            String fileStore = String.format("%s/%s/%s/%s/%s-%s",
-                    rootStore, resourceRequest.getFolder(), resourceRequest.getContentType(), date, user.getUserId(), chunkName);
+            String fileStore = String.format("%s/%s/%s/%s/%s-%s", rootStore, resourceRequest.getFolder(), resourceRequest.getContentType(), date, user.getUserId(), chunkName);
 
             File targetFile = new File(fileStore);
             FileUtils.forceMkdirParent(targetFile);
             Files.copy(file.getInputStream(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-            String fileName = String.format("%s/%s/%s/%s/%s-%s",
-                    rootName, resourceRequest.getFolder(), resourceRequest.getContentType(), date, user.getUserId(), chunkName);
+            String fileName = String.format("%s/%s/%s/%s/%s-%s", rootName, resourceRequest.getFolder(), resourceRequest.getContentType(), date, user.getUserId(), chunkName);
 
             Resource resource = resourceMapper.resourceReqToResource(resourceRequest);
             resource.setPath(fileName);
@@ -138,13 +141,7 @@ public class ResourceServiceImpl implements ResourceService {
             return null;
         }
 
-        chunkList = new ArrayList<>(chunkList.stream().collect(Collectors.toMap(
-                        Resource::getChunkIndex,
-                        Function.identity(),
-                        (a, b) -> a
-                ))
-                .values()
-        );
+        chunkList = new ArrayList<>(chunkList.stream().collect(Collectors.toMap(Resource::getChunkIndex, Function.identity(), (a, b) -> a)).values());
 
         String date = DateUtil.getNowDateFolder();
         Resource firstChunk = chunkList.get(0);
@@ -155,13 +152,7 @@ public class ResourceServiceImpl implements ResourceService {
             String fileExtension = StringUtil.getFileExtension(resourceRequest.getFileName());
             String finalContentType = determineMessageType(resourceRequest.getActualContentType());
 
-            String relativePath = String.format("%s/%s/%s/%s/%s-%s",
-                    resourceRequest.getFolder(),
-                    finalContentType,
-                    date,
-                    user.getUserId(),
-                    firstChunk.getResourceId(),
-                    fileExtension);
+            String relativePath = String.format("%s/%s/%s/%s/%s-%s", resourceRequest.getFolder(), finalContentType, date, user.getUserId(), firstChunk.getResourceId(), fileExtension);
             String absolutePath = rootStore + "/" + relativePath;
 
             long totalVolume = fastConcatenate(chunkList, absolutePath);
@@ -336,8 +327,7 @@ public class ResourceServiceImpl implements ResourceService {
         if (videoTypes.contains(ext.toLowerCase())) {
             try {
                 req.setActualContentType(null);
-                String previewName = String.format("%s/%s/%s/%s/%s.jpg",
-                        req.getFolder(), "IMAGE", resource.getDate(), user.getUserId(), resource.getResourceId());
+                String previewName = String.format("%s/%s/%s/%s/%s.jpg", req.getFolder(), "IMAGE", resource.getDate(), user.getUserId(), resource.getResourceId());
                 String previewPath = String.format("%s/%s", rootStore, previewName);
 
                 VideoDto videoDto = videoService.extract(new VideoRequest(absolutePath, previewPath));
@@ -380,8 +370,7 @@ public class ResourceServiceImpl implements ResourceService {
         File targetFile = new File(targetPath);
         FileUtils.forceMkdirParent(targetFile);
 
-        try (FileOutputStream fos = new FileOutputStream(targetFile);
-             FileChannel destChannel = fos.getChannel()) {
+        try (FileOutputStream fos = new FileOutputStream(targetFile); FileChannel destChannel = fos.getChannel()) {
 
             long totalBytes = 0;
             for (Resource chunk : chunkList) {
@@ -389,8 +378,7 @@ public class ResourceServiceImpl implements ResourceService {
                 File chunkFile = new File(rootStore + "/" + relativePath);
 
                 if (chunkFile.exists()) {
-                    try (FileInputStream fis = new FileInputStream(chunkFile);
-                         FileChannel srcChannel = fis.getChannel()) {
+                    try (FileInputStream fis = new FileInputStream(chunkFile); FileChannel srcChannel = fis.getChannel()) {
 
                         long size = srcChannel.size();
                         long transferred = 0;

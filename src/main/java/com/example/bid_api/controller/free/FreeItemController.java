@@ -1,7 +1,6 @@
-package com.example.bid_api.controller;
+package com.example.bid_api.controller.free;
 
 import com.example.bid_api.model.dto.ItemDto;
-import com.example.bid_api.model.entity.Item;
 import com.example.bid_api.model.entity.User;
 import com.example.bid_api.model.request.ItemRequest;
 import com.example.bid_api.service.ItemService;
@@ -14,17 +13,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/item")
+@RequestMapping("/free/item")
 @RequiredArgsConstructor
-public class ItemController {
+public class FreeItemController {
     private final ItemService itemService;
 
-    @PostMapping("/public/list")
+    @PostMapping("/list")
     public BaseResponse<List<ItemDto>> list(@RequestBody ItemRequest req, @AuthenticationPrincipal User user) {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", itemService.getList(req, user));
     }
 
-    @GetMapping("/public/detail/{itemId}")
+    @GetMapping("/detail/{itemId}")
     public BaseResponse<ItemDto> getItem(@PathVariable("itemId") String itemId, @AuthenticationPrincipal User user) {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", itemService.getDetail(itemId, user));
     }

@@ -12,12 +12,10 @@ import org.hibernate.service.spi.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Set;
 
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -26,24 +24,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserService userService;
 
-    private static final Set<String> ALLOWED_PATHS = Set.of("/api/mail/send", "/api/auth/login");
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
 
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+        return path.startsWith("/free/")
+                || path.equals("/api/mail/send");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        String path = request.getRequestURI();
-
-        boolean isAllowed = ALLOWED_PATHS.stream()
-                .anyMatch(pattern -> pathMatcher.match(pattern, path));
-
-        if (isAllowed) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         try {
             String jwt = getJwtFromRequest(request);
 

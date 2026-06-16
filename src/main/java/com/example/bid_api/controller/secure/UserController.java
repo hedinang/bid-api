@@ -1,14 +1,17 @@
-package com.example.bid_api.controller;
+package com.example.bid_api.controller.secure;
 
 import com.example.bid_api.model.entity.User;
+import com.example.bid_api.model.request.ChangePasswordRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.request.UploadFileRequest;
 import com.example.bid_api.model.request.UserRequest;
 import com.example.bid_api.model.search.UserSearch;
 import com.example.bid_api.service.ResourceService;
 import com.example.bid_api.service.UserService;
+import com.example.bid_api.util.exception.ServiceException;
 import com.example.bid_api.util.response.BaseResponse;
 import com.example.bid_api.util.response.Response;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/user")
+@RequestMapping("/secure/user")
 public class UserController {
     private final UserService userService;
     private final ResourceService resourceService;
@@ -37,6 +40,17 @@ public class UserController {
     @PostMapping("/list")
     public BaseResponse<Object> getUserList(@RequestBody PageRequest<UserSearch> request, @AuthenticationPrincipal User user) {
         return Response.toData(userService.getUserList(request));
+    }
+
+    @PostMapping("/change-password")
+    public BaseResponse<Object> changePasswordUser(@RequestBody @Valid ChangePasswordRequest request, @AuthenticationPrincipal User user) {
+        try {
+            return Response.toData(userService.changePassword(user.getUserId(), request));
+        } catch (ServiceException e) {
+            return Response.toError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
+        } catch (Exception e) {
+            return Response.toError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "An unexpected error occurred");
+        }
     }
 
     @PostMapping("/store-user")

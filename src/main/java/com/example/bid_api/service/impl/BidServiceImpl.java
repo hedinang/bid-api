@@ -7,26 +7,14 @@ import com.example.bid_api.model.request.DeleteBidRequest;
 import com.example.bid_api.repository.mongo.BidRepository;
 import com.example.bid_api.repository.mongo.ItemRepository;
 import com.example.bid_api.service.BidService;
+import com.example.bid_api.util.HtmlUtil;
 import com.example.bid_api.util.StringUtil;
-import com.example.bid_api.util.date.DateUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
-import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.URL;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,13 +26,10 @@ import java.util.stream.Collectors;
 public class BidServiceImpl implements BidService {
     private final BidRepository bidRepository;
     private final ItemRepository itemRepository;
-    private final Map<String, Thread> threadMap = new HashMap<>();
-    //    Proxy proxy = new Proxy();
-    private WebDriver bidDriver = null;
-    private WebDriver itemDriver = null;
 
-    @Value("${chrome-driver}")
-    String chromeDriver;
+    private final HtmlUtil htmlUtil;
+
+    private final Map<String, Thread> threadMap = new HashMap<>();
 
     @Value("${bid-email-address}")
     String bidEmailAddress;
@@ -65,112 +50,7 @@ public class BidServiceImpl implements BidService {
     @Override
     @Transactional
     public void storeBid() {
-        try {
-            System.setProperty("webdriver.chrome.driver", chromeDriver);
-            String clientUrl = "https://www.ecoauc.com/client";
-            // Initialize WebDriver with Chrome options
-            ChromeOptions options = new ChromeOptions();
-            options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
-            options.addArguments("--disable-gpu", "--remote-allow-origins=*");
-            options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-
-            bidDriver = new ChromeDriver(options);
-            bidDriver.manage().window().setSize(new Dimension(2400, 2000));
-            bidDriver.get(clientUrl);
-            bidDriver.manage().addCookie(new Cookie("CAKEPHP", getToken()));
-            bidDriver.get(clientUrl);
-            List<WebElement> webElements = bidDriver.findElements(By.className("slick-slide"));
-            List<Bid> bids = new ArrayList<>();
-
-            for (WebElement webElement : webElements) {
-                if (extractDateTime(webElement) == null) continue;
-                Bid bid = new Bid();
-                String detailUrl = extractDetailUrl(webElement);
-
-                if (detailUrl == null || detailUrl.isEmpty() || detailUrl.equals("https://www.ecoauc.com/client")) {
-                    continue;
-                }
-
-                bid.setBidStatus(extractBidStatus(webElement));
-//                bid.setHeaderIcon(extractIconUrl(webElement));
-                bid.setTimeStatus(extractTimeStatus(webElement));
-                String startPreviewTime = extractStartTime(webElement);
-                String endPreviewTime = extractEndTime(webElement);
-                String openDate = extractDateTime(webElement);
-
-                if (openDate == null || openDate.isEmpty()) {
-                    continue;
-                }
-
-                URL url = new URL(detailUrl);
-                String query = url.getQuery();
-                Map<String, String> queryParams = StringUtil.getQueryParams(query);
-                String bidId = queryParams.get("auctions");
-                bid.setDetailUrl(detailUrl);
-                bid.setBidId(bidId);
-
-                if (startPreviewTime != null) {
-                    startPreviewTime = startPreviewTime.replace("〜", "").trim();
-                    bid.setStartPreviewTime(DateUtil.formatStringToDate(startPreviewTime, "MMM,dd,yyyy HH:mm"));
-                }
-
-                if (endPreviewTime != null) {
-                    endPreviewTime = endPreviewTime.replace("〜", "").trim();
-                    bid.setEndPreviewTime(DateUtil.formatStringToDate(endPreviewTime, "MMM,dd,yyyy HH:mm"));
-                }
-
-                if (openDate != null) {
-                    openDate = openDate.replace("〜", "").trim();
-                    bid.setOpenTime(DateUtil.formatStringToDate(openDate, "MMM,dd,yyyy HH:mm"));
-                }
-
-                bid.setDonePage(0);
-                bid.setSynchronizing(false);
-                bids.add(bid);
-            }
-
-            List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
-            Map<String, Bid> existedMap = existedBids.stream().collect(Collectors.toMap(Bid::getDetailUrl, bid -> bid, (a, b) -> a));
-
-            List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
-            List<String> bidIds = bids.stream().map(Bid::getBidId).toList();
-            List<Bid> closedBids = bidRepository.findByClosedAndBidIdNotIn(false, bidIds);
-            closedBids.forEach(closedBid -> closedBid.setClosed(true));
-
-            List<Bid> needingStoreBids = new ArrayList<>(bids.stream().map(bid -> {
-                // temporarily store &master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4
-                int totalItem = getTotalItem(bid.getDetailUrl() + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4");
-
-                if (existedDetailUrls.contains(bid.getDetailUrl())) {
-                    Bid existedBid = existedMap.get(bid.getDetailUrl());
-                    int pages = (int) Math.ceil((double) totalItem / 50);
-                    int oldPages = (int) Math.ceil((double) existedBid.getTotalItem() / 50);
-                    existedBid.setDonePage(existedBid.getDonePage() + pages - oldPages);
-                    existedBid.setTotalItem(totalItem);
-                    return existedBid;
-                }
-
-                bid.setTotalItem(totalItem);
-
-                int pages = (int) Math.ceil((double) totalItem / 50);
-                bid.setDonePage(pages);
-                return bid;
-            }).toList());
-
-            needingStoreBids.addAll(closedBids);
-            bidRepository.saveAll(needingStoreBids);
-        } catch (Exception e) {
-            log.error(e.toString());
-        }
-
-        bidDriver.quit();
-        log.info("Get and store successfully bid");
-    }
-
-    @Override
-    @Transactional
-    public void storeBidV2() {
-        String html = cloneHtml("https://www.ecoauc.com/client");
+        String html = htmlUtil.cloneHtml("https://www.ecoauc.com/client");
 
         if (html == null || html.isEmpty()) {
             return;
@@ -188,7 +68,7 @@ public class BidServiceImpl implements BidService {
 
         List<Bid> needingStoreBids = new ArrayList<>(bids.stream().map(bid -> {
             // temporarily store &master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4
-            int totalItem = getTotalItemV2(bid.getDetailUrl() + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4");
+            int totalItem = getTotalItem(bid.getDetailUrl() + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4");
 
             if (existedDetailUrls.contains(bid.getDetailUrl())) {
                 Bid existedBid = existedMap.get(bid.getDetailUrl());
@@ -350,74 +230,16 @@ public class BidServiceImpl implements BidService {
         Thread thread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 Bid bid = bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
-                bid.setSynchronizing(true);
-                bidRepository.save(bid);
-                int totalItem = bid.getTotalItem();
-                if (totalItem == 0) {
-                    stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
-                    return;
-                }
-//                int pages = (int) Math.ceil((double) totalItem / 50);
-                if (bid.getDonePage() == 0) {
-                    stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
-                    return;
-                }
-
-                System.setProperty("webdriver.chrome.driver", chromeDriver);
-                // Initialize WebDriver with Chrome options
-                ChromeOptions options = new ChromeOptions();
-                options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
-                options.addArguments("--disable-gpu", "--remote-allow-origins=*");
-                options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-//                proxy.setSocksProxy("127.0.0.1:9050");
-//                proxy.setSocksVersion(5);
-//                options.setProxy(proxy);
-
-                itemDriver = new ChromeDriver(options);
-                itemDriver.manage().window().setSize(new Dimension(2400, 9000));
-                itemDriver.get("https://www.ecoauc.com/client");
-                String tk = getToken();
-                itemDriver.manage().addCookie(new Cookie("CAKEPHP", tk));
-                log.info("Start sync bid: {}-{}", bidRequest.getBidId(), bidRequest.getBidStatus());
-
-                for (int i = bid.getDonePage(); i > 0; i--) {
-                    syncItem(bid.getDetailUrl(), i, bid);
-                }
-                itemDriver.quit();
-                log.info("Sync complete bid: {}-{}", bidRequest.getBidId(), bidRequest.getBidStatus());
-
-                Bid syncBid = bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
-                syncBid.setSynchronizing(false);
-                bidRepository.save(bid);
-                stopThread("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
-                return;
-            }
-        });
-
-        thread.setName("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus());
-        threadMap.put("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus(), thread);
-        thread.start();
-    }
-
-    public void syncBidV2(BidRequest bidRequest) {
-        if (threadMap.containsKey("bid-" + bidRequest.getBidId() + "-" + bidRequest.getBidStatus())) {
-            System.out.println("bid getting is already running.");
-            return;
-        }
-
-        Thread thread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                Bid bid = bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
 
                 for (int page = bid.getDonePage(); page > 0; page--) {
-                    List<String> itemUrls = syncItemV2(bid.getDetailUrl(), 1);
+                    List<String> itemUrls = syncItem(bid.getDetailUrl(), 1);
                     List<Item> itemList = itemUrls.stream().map(url -> {
                         Item item = new Item();
                         item.setBidId(bid.getBidId());
                         item.setBidStatus(bid.getBidStatus());
                         item.setItemUrl(url);
 
-                        String html = cloneHtml(url);
+                        String html = htmlUtil.cloneHtml(url);
 
                         if (html != null && !html.isEmpty()) {
                             item.setDetailUrls(extractImageUrls(html));
@@ -454,49 +276,9 @@ public class BidServiceImpl implements BidService {
         return threadMap.keySet();
     }
 
-    private void syncItem(String clientUrl, int page, Bid bid) {
+    private List<String> syncItem(String clientUrl, int page) {
         try {
-            itemDriver.get(clientUrl + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4" + "&page=" + page);
-            log.info("Start extract: {}-{}-{}", bid.getBidId(), bid.getBidStatus(), page);
-
-            List<WebElement> webElements = itemDriver.findElements(By.className("card"));
-            List<Item> itemList = new ArrayList<>();
-            for (WebElement we : webElements) {
-                Item item = new Item();
-                item.setBidId(bid.getBidId());
-                item.setBidStatus(bid.getBidStatus());
-
-                String itemDetailUrl = we.findElement(By.tagName("a")).getAttribute("href");
-                List<WebElement> basicInfo = we.findElements(By.tagName("li"));
-                item.setRank(basicInfo.get(0).getText().split("\n")[1]);
-//                item.setStartPrice(basicInfo.get(1).getText().split("\n")[1]);
-                item.setAuctionOrder(basicInfo.get(2).getText().split("\n")[1]);
-
-                item.setBrand(we.findElement(By.tagName("small")).getText());
-                item.setItemUrl(itemDetailUrl);
-                item.setTitle(we.findElement(By.tagName("b")).getText());
-//                item.setItemId(extractItemId(itemDetailUrl));
-                itemList.add(item);
-            }
-
-            for (Item item : itemList) {
-                extractItemDetail(item, item.getItemUrl());
-            }
-
-            List<String> existedItemIds = itemRepository.findByBidIdIn(itemList.stream().map(Item::getBidId).toList()).stream().map(Item::getBidId).toList();
-            List<Item> newItems = itemList.stream().filter(i -> !existedItemIds.contains(i.getItemId())).toList();
-            itemRepository.saveAll(newItems);
-            bid.setDonePage(page - 1);
-            bidRepository.save(bid);
-        } catch (Exception e) {
-            log.error(e.toString());
-        }
-
-    }
-
-    private List<String> syncItemV2(String clientUrl, int page) {
-        try {
-            String html = cloneHtml(clientUrl + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4" + "&page=" + page + "&tableType=list");
+            String html = htmlUtil.cloneHtml(clientUrl + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4" + "&page=" + page + "&tableType=list");
 
             if (html == null || html.isEmpty()) {
                 return new ArrayList<>();
@@ -535,224 +317,14 @@ public class BidServiceImpl implements BidService {
         return urls;
     }
 
-    private void extractItemDetail(Item item, String itemDetailUrl) {
-        try {
-            itemDriver.get(itemDetailUrl);
-            List<WebElement> webElements = itemDriver.findElements(By.className("pc-image-area"));
-            List<String> a = webElements.stream().map(w -> extractItemDetailUrl(w.getAttribute("style"))).toList();
-            item.setDetailUrls(a);
-
-            WebElement itemInfo = itemDriver.findElement(By.className("item-info"));
-            extractItemId(item, itemInfo);
-            extractDescription(item, itemInfo);
-            extractItemCategory(item, itemInfo);
-        } catch (Exception e) {
-            log.error(e.toString());
-        }
-    }
-
-    private void extractItemId(Item item, WebElement we) {
-        try {
-            item.setItemId(we.findElement(By.tagName("small")).getText());
-        } catch (Exception e) {
-            log.error(e.toString());
-        }
-    }
-
-    private void extractItemCategory(Item item, WebElement we) {
-        try {
-            WebElement infoDetails = we.findElement(By.className("dl-horizontal"));
-            List<WebElement> paramList = infoDetails.findElements(By.tagName("dd"));
-            item.setCategory(paramList.get(5).getText());
-        } catch (Exception e) {
-            log.error(e.toString());
-        }
-    }
-
-    private void extractDescription(Item item, WebElement we) {
-        try {
-            item.setDescription(we.findElements(By.tagName("p")).get(1).getText());
-        } catch (Exception e) {
-            log.error(e.toString());
-        }
-    }
-
-    private String extractItemId(String itemDetailUrl) {
-        Pattern pattern = Pattern.compile("/view/(\\d+)/Auctions");
-        Matcher matcher = pattern.matcher(itemDetailUrl);
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-        return itemDetailUrl;
-    }
-
-    private String extractItemDetailUrl(String itemDetailUrl) {
-        try {
-            String[] splitter = itemDetailUrl.split("\"");
-            if (splitter.length > 1) {
-                int questionMarkIndex = splitter[1].indexOf('?');
-                // If '?' exists, extract the substring before it
-                if (questionMarkIndex != -1) {
-                    splitter[1] = splitter[1].substring(0, questionMarkIndex);
-                }
-                return splitter[1];
-            }
-        } catch (Exception e) {
-            return "";
-        }
-        return "";
-    }
-
     public int getTotalItem(String clientUrl) {
-        try {
-            bidDriver.get(clientUrl);
-            WebElement e = bidDriver.findElement(By.className("form-control-static"));
-            return extractTotalItem(e.getText());
-        } catch (Exception e) {
-            log.error(e.toString());
-            return 0;
-        }
-    }
-
-    public int getTotalItemV2(String clientUrl) {
-        String html = cloneHtml(clientUrl);
+        String html = htmlUtil.cloneHtml(clientUrl);
 
         if (html == null || html.isEmpty()) {
             return 0;
         }
 
         return extractTotal(html);
-    }
-
-    private int extractTotalItem(String text) {
-        Pattern pattern = Pattern.compile("Showing\\s([\\d,]+)");
-        Matcher matcher = pattern.matcher(text);
-
-        if (matcher.find()) {
-            String result = matcher.group(1).replace(",", ""); // Remove commas if necessary
-            return Integer.parseInt(result);
-        } else {
-            return 0;
-        }
-    }
-
-    public String extractDetailUrl(WebElement element) {
-        try {
-            return element.findElement(By.tagName("a")).getAttribute("href");
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String extractBidStatus(WebElement element) {
-        try {
-            return element.findElement(By.className("en")).getText();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String extractIconUrl(WebElement element) {
-        try {
-            return element.findElement(By.tagName("img")).getAttribute("src");
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String extractStartTime(WebElement element) {
-        try {
-            return element.findElement(By.className("preview-box")).findElement(By.className("box")).findElements(By.tagName("span")).get(0).getText();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String extractEndTime(WebElement element) {
-        try {
-            return element.findElement(By.className("preview-box")).findElement(By.className("box")).findElements(By.tagName("span")).get(1).getText();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String extractTimeStatus(WebElement element) {
-        try {
-            return element.findElement(By.className("market-info")).getText();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String extractTitle(WebElement element) {
-        try {
-            return element.findElement(By.className("market-title")).getText();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String extractDateTime(WebElement element) {
-        try {
-            return element.findElement(By.className("datetime")).getText();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private String getToken() {
-        try {
-            String loginUrl = "https://www.ecoauc.com/client/users/post-sign-in";
-            Connection.Response loginResponse = Jsoup.connect(loginUrl)
-                    .cookie("csrfToken", "bfb9dce0e28af1531cee77027f2d6c6ef072ad499ceccac44484b24909cfa94688723585a66072a423b18a7f8c3beb023400032fb7dad89ffc32d13f842ab14b")
-                    .data("_csrfToken", "bfb9dce0e28af1531cee77027f2d6c6ef072ad499ceccac44484b24909cfa94688723585a66072a423b18a7f8c3beb023400032fb7dad89ffc32d13f842ab14b")
-                    .data("email_address", bidEmailAddress)
-                    .data("password", bidEmailPass)
-                    .data("remember-me", "remember-me")
-                    .method(Connection.Method.POST)
-                    .execute();
-
-            Map<String, String> cookies = loginResponse.cookies();
-            return cookies.get("CAKEPHP");
-        } catch (Exception ex) {
-            log.error(ex.toString());
-        }
-        return "rrb8pmigiak49frf1j2n15rqqa";
-    }
-
-    // delete expired bid
-//    @Scheduled(cron = "0 50 21 * * ?") // Executes every 5 seconds
-    public void closeExpiredBid() {
-        if (threadMap.containsKey("sync-bid")) {
-            System.out.println("bid getting is already running.");
-            return;
-        }
-
-        Thread thread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                log.info("start to clean expired bid");
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss yyyy-MM-dd");
-                List<Bid> bids = bidRepository.findByClosed(false);
-                List<Bid> expiredBids = bids.stream().filter(bid -> {
-                    LocalDateTime openTime = LocalDateTime.parse(bid.getOpenTime(), formatter);
-                    // Compare with the current time
-                    return openTime.isBefore(LocalDateTime.now());
-                }).map(bid -> {
-                    bid.setClosed(true);
-                    stopThread(bid.getBidId() + "-" + bid.getBidStatus());
-                    return bid;
-                }).toList();
-                bidRepository.saveAll(expiredBids);
-                // clear running thread belong to expired bids
-                storeBid();
-                stopThread("sync-bid");
-                return;
-            }
-        });
-
-        thread.setName("sync-bid");
-        threadMap.put("sync-bid", thread);
-        thread.start();
     }
 
     @Override
@@ -891,29 +463,5 @@ public class BidServiceImpl implements BidService {
         }
 
         return "";
-    }
-
-    private String cloneHtml(String url) {
-        HttpClient client = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Cookie", "CAKEPHP=" + getToken())
-                .header("User-Agent", "Mozilla/5.0")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .GET()
-                .build();
-        try {
-            HttpResponse<String> response = client.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString()
-            );
-            return response.body();
-        } catch (Exception e) {
-            log.error(e.toString());
-            return "";
-        }
     }
 }

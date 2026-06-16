@@ -2,11 +2,13 @@ package com.example.bid_api.service.impl;
 
 import com.example.bid_api.model.entity.Mail;
 import com.example.bid_api.model.request.MessageRequest;
+import com.example.bid_api.repository.mongo.AutoItemRepository;
 import com.example.bid_api.repository.mongo.MailRepository;
+import com.example.bid_api.service.AutoItemService;
 import com.example.bid_api.service.MailService;
 import com.example.bid_api.util.StringUtil;
+import jakarta.annotation.PostConstruct;
 import jakarta.mail.*;
-import jakarta.mail.internet.MimeMultipart;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +24,9 @@ import java.util.Properties;
 @RequiredArgsConstructor
 @Slf4j
 public class MailServiceImpl implements MailService {
+    private final AutoItemRepository autoItemRepository;
+
+    private final AutoItemService autoItemService;
     @Value("${email-host}")
     private String host;
 
@@ -34,8 +39,37 @@ public class MailServiceImpl implements MailService {
     @Value("${email-password}")
     private String password;
 
+    @Value("${target-email}")
+    private String targetEmail;
+
     private final MailRepository mailRepository;
     private final MailSender mailSender;
+
+    private long lastSeenUid = 0L;
+
+    @PostConstruct
+    public void init() {
+        Store store = null;
+        Folder inbox = null;
+
+        try {
+            store = connectStore();
+
+            inbox = store.getFolder("INBOX");
+            inbox.open(Folder.READ_ONLY);
+
+            UIDFolder uidFolder = (UIDFolder) inbox;
+
+            lastSeenUid = uidFolder.getUIDNext() - 1;
+
+            log.info("Email polling initialized. lastSeenUid={}", lastSeenUid);
+
+        } catch (Exception e) {
+            log.error("Cannot initialize email polling", e);
+        } finally {
+            close(inbox, store);
+        }
+    }
 
     public Mail store(Mail request) {
         if (request.getMailId() == null) {
@@ -72,105 +106,105 @@ public class MailServiceImpl implements MailService {
         }));
     }
 
-//    @Scheduled(fixedDelay = 4000)
-    public void pollEmail(){
+    //30 minutes
+//    @Scheduled(fixedDelay = 1800000)
+    @Scheduled(fixedDelay = 180000)
+    public void pollEmail() {
         Store store = null;
         Folder inbox = null;
 
         try {
-            Properties props = new Properties();
-            props.put("mail.store.protocol", "imaps");
-            props.put("mail.imaps.host", host);
-            props.put("mail.imaps.port", port);
-            props.put("mail.imaps.ssl.enable", "true");
-
-            Session session = Session.getInstance(props);
-            store = session.getStore("imaps");
-            store.connect(host, username, password);
+            store = connectStore();
 
             inbox = store.getFolder("INBOX");
-            inbox.open(Folder.READ_WRITE);
+            inbox.open(Folder.READ_ONLY);
 
-            // Chỉ lấy mail chưa đọc
-            Message[] messages = inbox.search(
-                    new jakarta.mail.search.FlagTerm(
-                            new Flags(Flags.Flag.SEEN),
-                            false
-                    )
+            UIDFolder uidFolder = (UIDFolder) inbox;
+
+            long oldLastSeenUid = lastSeenUid;
+
+            long currentLastUid = uidFolder.getUIDNext() - 1;
+
+            if (currentLastUid <= oldLastSeenUid) {
+                return;
+            }
+
+            Message[] newMessages = uidFolder.getMessagesByUID(
+                    oldLastSeenUid + 1,
+                    currentLastUid
             );
 
-            for (Message message : messages) {
-                String from = message.getFrom()[0].toString();
-                String subject = message.getSubject();
-                String body = getTextFromMessage(message);
+            boolean detected = false;
 
-                System.out.println("New email:");
-                System.out.println("From: " + from);
-                System.out.println("Subject: " + subject);
-                System.out.println("Body: " + body);
+            for (int i = newMessages.length - 1; i >= 0; i--) {
+                Message message = newMessages[i];
+                long uid = uidFolder.getUID(message);
 
-                // TODO: xử lý logic của bạn
-                handleNewEmail(from, subject, body);
+                // phòng thủ nếu server trả dư message biên
+                if (uid <= oldLastSeenUid) {
+                    continue;
+                }
 
-                // Mark mail là đã đọc để lần sau không xử lý lại
-                message.setFlag(Flags.Flag.SEEN, true);
+                if (isFromTarget(message)) {
+                    detected = true;
+                    break;
+                }
             }
 
+            lastSeenUid = currentLastUid;
+
+            if (detected) {
+                autoItemService.scanAutoItems();
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error while polling email", e);
         } finally {
-            try {
-                if (inbox != null && inbox.isOpen()) {
-                    inbox.close(false);
-                }
-                if (store != null && store.isConnected()) {
-                    store.close();
-                }
-            } catch (Exception ignored) {
-            }
+            close(inbox, store);
         }
     }
 
-    private void handleNewEmail(String from, String subject, String body) {
-        // Ví dụ:
-        // 1. lưu DB
-        // 2. call API khác
-        // 3. parse nội dung email
-        // 4. trigger workflow
+    private Store connectStore() throws Exception {
+        Properties props = new Properties();
+        props.put("mail.store.protocol", "imaps");
+        props.put("mail.imaps.host", host);
+        props.put("mail.imaps.port", port);
+        props.put("mail.imaps.ssl.enable", "true");
 
-        System.out.println("Processing email from: " + from);
+        Session session = Session.getInstance(props);
+
+        Store store = session.getStore("imaps");
+        store.connect(host, username, password);
+
+        return store;
     }
 
-    private String getTextFromMessage(Message message) throws Exception {
-        Object content = message.getContent();
+    private boolean isFromTarget(Message message) throws Exception {
+        Address[] froms = message.getFrom();
 
-        if (content instanceof String) {
-            return (String) content;
+        if (froms == null || froms.length == 0) {
+            return false;
         }
 
-        if (content instanceof MimeMultipart) {
-            return getTextFromMimeMultipart((MimeMultipart) content);
-        }
-
-        return "";
-    }
-
-    private String getTextFromMimeMultipart(MimeMultipart multipart) throws Exception {
-        StringBuilder result = new StringBuilder();
-
-        for (int i = 0; i < multipart.getCount(); i++) {
-            BodyPart bodyPart = multipart.getBodyPart(i);
-
-            if (bodyPart.isMimeType("text/plain")) {
-                result.append(bodyPart.getContent());
-            } else if (bodyPart.isMimeType("text/html")) {
-                String html = (String) bodyPart.getContent();
-                result.append(html);
-            } else if (bodyPart.getContent() instanceof MimeMultipart) {
-                result.append(getTextFromMimeMultipart((MimeMultipart) bodyPart.getContent()));
+        for (Address from : froms) {
+            if (from != null &&
+                    from.toString().toLowerCase().contains(targetEmail.toLowerCase())) {
+                return true;
             }
         }
 
-        return result.toString();
+        return false;
+    }
+
+    private void close(Folder inbox, Store store) {
+        try {
+            if (inbox != null && inbox.isOpen()) {
+                inbox.close(false);
+            }
+
+            if (store != null && store.isConnected()) {
+                store.close();
+            }
+        } catch (Exception ignored) {
+        }
     }
 }
