@@ -108,7 +108,7 @@ public class MailServiceImpl implements MailService {
 
     //30 minutes
 //    @Scheduled(fixedDelay = 1800000)
-    @Scheduled(fixedDelay = 180000)
+//    @Scheduled(fixedDelay = 180000)
     public void pollEmail() {
         Store store = null;
         Folder inbox = null;
