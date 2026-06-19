@@ -1,8 +1,10 @@
 package com.example.bid_api.service.impl;
 
 import com.example.bid_api.model.dto.Page;
+import com.example.bid_api.model.dto.ScanDto;
 import com.example.bid_api.model.entity.AutoItem;
 import com.example.bid_api.model.request.PageRequest;
+import com.example.bid_api.model.request.ScanRequest;
 import com.example.bid_api.model.search.AutoItemSearch;
 import com.example.bid_api.repository.mongo.AutoItemRepository;
 import com.example.bid_api.service.AutoItemService;
@@ -15,12 +17,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -35,7 +45,12 @@ public class AutoItemServiceImpl implements AutoItemService {
 
     private final HtmlUtil htmlUtil;
 
-    private Thread scanThread;
+    private long runningMinutes = 1;
+    private Instant startTime;
+    private Long maxRunningMinutes;
+    private final TaskScheduler taskScheduler;
+    private final AtomicReference<ScheduledFuture<?>> runningFutureRef = new AtomicReference<>();
+    private final AtomicReference<ScheduledFuture<?>> stopFutureRef = new AtomicReference<>();
 
     public List<AutoItem> extractCsvFile(String resourceId) {
         File csvFile = resourceService.readFile(resourceId);
@@ -105,70 +120,116 @@ public class AutoItemServiceImpl implements AutoItemService {
         return result;
     }
 
-    public synchronized void scanAutoItems() {
-        if (scanThread != null && scanThread.isAlive()) {
-            log.info("bid getting is already running.");
-            return;
+//    public synchronized void scanAutoItems() {
+//        if (scanThread != null && scanThread.isAlive()) {
+//            log.info("bid getting is already running.");
+//            return;
+//        }
+//
+//        scanThread = new Thread(() -> {
+//            try {
+//                int totalItem = bidService.getTotalItem("https://www.ecoauc.com/client/mylist?is_bid=1&is_other_bid=1&sortKey=1&limit=50&q=&master_item_ranks=&auction_lane_id=&tableType=list"
+//                );
+//
+//                int pages = (int) Math.ceil((double) totalItem / 50);
+//
+//                List<BidItem> higherBidItems = new ArrayList<>();
+//
+//                for (int page = 0; page < pages; page++) {
+//                    higherBidItems.addAll(extractHigherBid(page));
+//                }
+//
+//                Map<String, BidItem> higherBidMap = higherBidItems.stream()
+////                        .filter(item -> item.haveTheRight)
+//                        .collect(Collectors.toMap(
+//                                BidItem::getItemNumber,
+//                                item -> item,
+//                                (oldItem, newItem) -> newItem
+//                        ));
+//
+//                List<AutoItem> autoItems =
+//                        autoItemRepository.findByItemNumberIn(new ArrayList<>(higherBidMap.keySet()));
+//
+//                htmlUtil.login();
+//
+//                for (AutoItem autoItem : autoItems) {
+//                    BidItem bidItem = higherBidMap.get(autoItem.getItemNumber());
+//
+//                    if (bidItem == null || autoItem.getMaxPrice() == 0 || bidItem.getPrice() > autoItem.getMaxPrice())
+//                        continue;
+//
+////                    Map<String, String> formData = new HashMap<>();
+////                    formData.put("user_id", "13393");
+////                    formData.put("auction_item_id", autoItem.getItemNumber());
+//
+//                    long addMore = bidItem.getPrice() >= 500000 ? 5000 : 1000;
+//
+////                    formData.put("bid_price", String.valueOf(bidItem.getPrice() + addMore));
+//
+//                    String res = htmlUtil.bidTimelimit(
+//                            "13393",
+//                            autoItem.getItemId(),
+//                            bidItem.getPrice() + addMore
+//                    );
+//
+//                    log.info(res);
+//                }
+//
+//            } catch (Exception e) {
+//                log.error("scanAutoItems error", e);
+//            } finally {
+//                scanThread = null;
+//                log.info("autoItem thread has been stopped.");
+//            }
+//        });
+//
+//        scanThread.start();
+//    }
+
+    public ScanDto executeTrigger(ScanRequest request) {
+        stopTrigger();
+
+        this.startTime = Instant.now();
+        this.maxRunningMinutes = request.getMaxRunningMinutes();
+
+        ScheduledFuture<?> runningFuture = taskScheduler.scheduleAtFixedRate(
+                this::scanAutoItems,
+                Duration.ofMinutes(runningMinutes)
+        );
+
+        runningFutureRef.set(runningFuture);
+
+        ScheduledFuture<?> stopFuture = taskScheduler.schedule(
+                this::stopTrigger,
+                Instant.now().plus(Duration.ofMinutes(request.getMaxRunningMinutes()))
+        );
+
+        stopFutureRef.set(stopFuture);
+
+        return new ScanDto(startTime.plus(Duration.ofMinutes(maxRunningMinutes)), maxRunningMinutes);
+    }
+
+    public void stopTrigger() {
+        ScheduledFuture<?> runningFuture = runningFutureRef.getAndSet(null);
+        if (runningFuture != null && !runningFuture.isCancelled()) {
+            runningFuture.cancel(false);
         }
 
-        scanThread = new Thread(() -> {
-            try {
-                int totalItem = bidService.getTotalItem("https://www.ecoauc.com/client/mylist?is_bid=1&is_other_bid=1&sortKey=1&limit=50&q=&master_item_ranks=&auction_lane_id=&tableType=list"
-                );
+        ScheduledFuture<?> stopFuture = stopFutureRef.getAndSet(null);
+        if (stopFuture != null && !stopFuture.isCancelled()) {
+            stopFuture.cancel(false);
+        }
 
-                int pages = (int) Math.ceil((double) totalItem / 50);
+        this.startTime = null;
+        this.maxRunningMinutes = null;
+    }
 
-                List<BidItem> higherBidItems = new ArrayList<>();
-
-                for (int page = 0; page < pages; page++) {
-                    higherBidItems.addAll(extractHigherBid(page));
-                }
-
-                Map<String, BidItem> higherBidMap = higherBidItems.stream()
-//                        .filter(item -> item.haveTheRight)
-                        .collect(Collectors.toMap(
-                                BidItem::getItemNumber,
-                                item -> item,
-                                (oldItem, newItem) -> newItem
-                        ));
-
-                List<AutoItem> autoItems =
-                        autoItemRepository.findByItemNumberIn(new ArrayList<>(higherBidMap.keySet()));
-
-                htmlUtil.login();
-
-                for (AutoItem autoItem : autoItems) {
-                    BidItem bidItem = higherBidMap.get(autoItem.getItemNumber());
-
-                    if (bidItem == null || autoItem.getMaxPrice() == 0 || bidItem.getPrice() > autoItem.getMaxPrice())
-                        continue;
-
-//                    Map<String, String> formData = new HashMap<>();
-//                    formData.put("user_id", "13393");
-//                    formData.put("auction_item_id", autoItem.getItemNumber());
-
-                    long addMore = bidItem.getPrice() >= 500000 ? 5000 : 1000;
-
-//                    formData.put("bid_price", String.valueOf(bidItem.getPrice() + addMore));
-
-                    String res = htmlUtil.bidTimelimit(
-                            "13393",
-                            autoItem.getItemId(),
-                            bidItem.getPrice() + addMore
-                    );
-
-                    log.info(res);
-                }
-
-            } catch (Exception e) {
-                log.error("scanAutoItems error", e);
-            } finally {
-                scanThread = null;
-                log.info("autoItem thread has been stopped.");
-            }
-        });
-
-        scanThread.start();
+    public ScanDto checkScan() {
+        if (startTime == null || maxRunningMinutes == null) {
+            return null;
+        } else {
+            return new ScanDto(startTime.plus(Duration.ofMinutes(maxRunningMinutes)), maxRunningMinutes);
+        }
     }
 
     public List<BidItem> extractHigherBid(int page) {
@@ -289,6 +350,54 @@ public class AutoItemServiceImpl implements AutoItemService {
 
         String value = record.get(columnName);
         return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private void t() {
+        log.info("test");
+    }
+
+    private void scanAutoItems() {
+        try {
+            int totalItem = bidService.getTotalItem("https://www.ecoauc.com/client/mylist?is_bid=1&is_other_bid=1&sortKey=1&limit=50&q=&master_item_ranks=&auction_lane_id=&tableType=list"
+            );
+
+            int pages = (int) Math.ceil((double) totalItem / 50);
+
+            List<BidItem> higherBidItems = new ArrayList<>();
+
+            for (int page = 0; page < pages; page++) {
+                higherBidItems.addAll(extractHigherBid(page));
+            }
+
+            Map<String, BidItem> higherBidMap = higherBidItems.stream()
+                    .collect(Collectors.toMap(
+                            BidItem::getItemNumber,
+                            item -> item,
+                            (oldItem, newItem) -> newItem
+                    ));
+
+            List<AutoItem> autoItems =
+                    autoItemRepository.findByItemNumberIn(new ArrayList<>(higherBidMap.keySet()));
+
+            htmlUtil.login();
+
+            for (AutoItem autoItem : autoItems) {
+                BidItem bidItem = higherBidMap.get(autoItem.getItemNumber());
+
+                if (bidItem == null || autoItem.getMaxPrice() == 0 || bidItem.getPrice() > autoItem.getMaxPrice())
+                    continue;
+
+                long addMore = bidItem.getPrice() >= 500000 ? 5000 : 1000;
+
+                htmlUtil.bidTimelimit(
+                        "13393",
+                        autoItem.getItemId(),
+                        bidItem.getPrice() + addMore
+                );
+            }
+        } catch (Exception e) {
+            log.error("scanAutoItems error", e);
+        }
     }
 
     @Data

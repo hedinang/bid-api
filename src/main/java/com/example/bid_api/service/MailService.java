@@ -14,5 +14,5 @@ public interface MailService {
 
     void sendEmail(MessageRequest request);
 
-    void pollEmail();
+//    void pollEmail();
 }

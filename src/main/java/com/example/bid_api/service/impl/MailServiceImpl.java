@@ -2,9 +2,7 @@ package com.example.bid_api.service.impl;
 
 import com.example.bid_api.model.entity.Mail;
 import com.example.bid_api.model.request.MessageRequest;
-import com.example.bid_api.repository.mongo.AutoItemRepository;
 import com.example.bid_api.repository.mongo.MailRepository;
-import com.example.bid_api.service.AutoItemService;
 import com.example.bid_api.service.MailService;
 import com.example.bid_api.util.StringUtil;
 import jakarta.annotation.PostConstruct;
@@ -14,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,9 +21,6 @@ import java.util.Properties;
 @RequiredArgsConstructor
 @Slf4j
 public class MailServiceImpl implements MailService {
-    private final AutoItemRepository autoItemRepository;
-
-    private final AutoItemService autoItemService;
     @Value("${email-host}")
     private String host;
 
@@ -109,59 +103,59 @@ public class MailServiceImpl implements MailService {
     //30 minutes
 //    @Scheduled(fixedDelay = 1800000)
 //    @Scheduled(fixedDelay = 180000)
-    public void pollEmail() {
-        Store store = null;
-        Folder inbox = null;
-
-        try {
-            store = connectStore();
-
-            inbox = store.getFolder("INBOX");
-            inbox.open(Folder.READ_ONLY);
-
-            UIDFolder uidFolder = (UIDFolder) inbox;
-
-            long oldLastSeenUid = lastSeenUid;
-
-            long currentLastUid = uidFolder.getUIDNext() - 1;
-
-            if (currentLastUid <= oldLastSeenUid) {
-                return;
-            }
-
-            Message[] newMessages = uidFolder.getMessagesByUID(
-                    oldLastSeenUid + 1,
-                    currentLastUid
-            );
-
-            boolean detected = false;
-
-            for (int i = newMessages.length - 1; i >= 0; i--) {
-                Message message = newMessages[i];
-                long uid = uidFolder.getUID(message);
-
-                // phòng thủ nếu server trả dư message biên
-                if (uid <= oldLastSeenUid) {
-                    continue;
-                }
-
-                if (isFromTarget(message)) {
-                    detected = true;
-                    break;
-                }
-            }
-
-            lastSeenUid = currentLastUid;
-
-            if (detected) {
-                autoItemService.scanAutoItems();
-            }
-        } catch (Exception e) {
-            log.error("Error while polling email", e);
-        } finally {
-            close(inbox, store);
-        }
-    }
+//    public void pollEmail() {
+//        Store store = null;
+//        Folder inbox = null;
+//
+//        try {
+//            store = connectStore();
+//
+//            inbox = store.getFolder("INBOX");
+//            inbox.open(Folder.READ_ONLY);
+//
+//            UIDFolder uidFolder = (UIDFolder) inbox;
+//
+//            long oldLastSeenUid = lastSeenUid;
+//
+//            long currentLastUid = uidFolder.getUIDNext() - 1;
+//
+//            if (currentLastUid <= oldLastSeenUid) {
+//                return;
+//            }
+//
+//            Message[] newMessages = uidFolder.getMessagesByUID(
+//                    oldLastSeenUid + 1,
+//                    currentLastUid
+//            );
+//
+//            boolean detected = false;
+//
+//            for (int i = newMessages.length - 1; i >= 0; i--) {
+//                Message message = newMessages[i];
+//                long uid = uidFolder.getUID(message);
+//
+//                // phòng thủ nếu server trả dư message biên
+//                if (uid <= oldLastSeenUid) {
+//                    continue;
+//                }
+//
+//                if (isFromTarget(message)) {
+//                    detected = true;
+//                    break;
+//                }
+//            }
+//
+//            lastSeenUid = currentLastUid;
+//
+//            if (detected) {
+//                autoItemService.scanAutoItems();
+//            }
+//        } catch (Exception e) {
+//            log.error("Error while polling email", e);
+//        } finally {
+//            close(inbox, store);
+//        }
+//    }
 
     private Store connectStore() throws Exception {
         Properties props = new Properties();
