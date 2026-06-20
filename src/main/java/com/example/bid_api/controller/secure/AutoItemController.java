@@ -2,6 +2,7 @@ package com.example.bid_api.controller.secure;
 
 import com.example.bid_api.model.dto.ScanDto;
 import com.example.bid_api.model.request.AutoItemFileRequest;
+import com.example.bid_api.model.request.AutoItemRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.request.ScanRequest;
 import com.example.bid_api.model.search.AutoItemSearch;
@@ -28,6 +29,18 @@ public class AutoItemController {
     @PostMapping("/list")
     public BaseResponse<Object> getList(@RequestBody PageRequest<AutoItemSearch> request) {
         return Response.toData(autoItemService.getList(request));
+    }
+
+    @PostMapping("/delete/{itemId}")
+    public BaseResponse<Object> getList(@PathVariable("itemId") String itemId) {
+        autoItemService.delete(itemId);
+        return new BaseResponse<>(HttpStatus.OK.value(), "Delete successfully");
+    }
+
+    @PostMapping("/edit")
+    public BaseResponse<Object> getList(@RequestBody AutoItemRequest request) {
+        autoItemService.edit(request);
+        return new BaseResponse<>(HttpStatus.OK.value(), "Delete successfully");
     }
 
     @PostMapping("/scan")

@@ -8,4 +8,8 @@ import java.util.List;
 
 public interface AutoItemRepository extends MongoRepository<AutoItem, String>, CustomAutoItemRepository {
     List<AutoItem> findByItemNumberIn(List<String> itemNumbers);
+
+    AutoItem findByItemId(String itemId);
+
+    void deleteByItemId(String itemId);
 }

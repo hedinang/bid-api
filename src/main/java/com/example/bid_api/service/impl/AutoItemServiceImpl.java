@@ -3,6 +3,7 @@ package com.example.bid_api.service.impl;
 import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.dto.ScanDto;
 import com.example.bid_api.model.entity.AutoItem;
+import com.example.bid_api.model.request.AutoItemRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.request.ScanRequest;
 import com.example.bid_api.model.search.AutoItemSearch;
@@ -11,6 +12,7 @@ import com.example.bid_api.service.AutoItemService;
 import com.example.bid_api.service.BidService;
 import com.example.bid_api.service.ResourceService;
 import com.example.bid_api.util.HtmlUtil;
+import jakarta.transaction.Transactional;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +47,7 @@ public class AutoItemServiceImpl implements AutoItemService {
 
     private final HtmlUtil htmlUtil;
 
-    private long runningMinutes = 1;
+    private long runningMinutes = 3;
     private Instant startTime;
     private Long maxRunningMinutes;
     private final TaskScheduler taskScheduler;
@@ -118,6 +120,20 @@ public class AutoItemServiceImpl implements AutoItemService {
         result.setItems(autoItemRepository.getList(request));
         result.setTotalItems(autoItemRepository.countList(request.getSearch()));
         return result;
+    }
+
+    @Transactional
+    public void delete(String itemId) {
+        autoItemRepository.deleteByItemId(itemId);
+    }
+
+    @Transactional
+    public void edit(AutoItemRequest request){
+        AutoItem autoItem = autoItemRepository.findByItemId(request.getItemId());
+        if (autoItem != null) {
+            autoItem.setMaxPrice(request.getMaxPrice());
+            autoItemRepository.save(autoItem);
+        }
     }
 
 //    public synchronized void scanAutoItems() {
