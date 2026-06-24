@@ -128,7 +128,13 @@ public class AutoItemServiceImpl implements AutoItemService {
     }
 
     @Transactional
-    public void edit(AutoItemRequest request){
+    public void deleteAll() {
+        autoItemRepository.deleteAll();
+        stopTrigger();
+    }
+
+    @Transactional
+    public void edit(AutoItemRequest request) {
         AutoItem autoItem = autoItemRepository.findByItemId(request.getItemId());
         if (autoItem != null) {
             autoItem.setMaxPrice(request.getMaxPrice());
@@ -400,7 +406,7 @@ public class AutoItemServiceImpl implements AutoItemService {
             for (AutoItem autoItem : autoItems) {
                 BidItem bidItem = higherBidMap.get(autoItem.getItemNumber());
 
-                if (bidItem == null || autoItem.getMaxPrice() == 0 || bidItem.getPrice() > autoItem.getMaxPrice())
+                if (bidItem == null || autoItem.getMaxPrice() == 0 || bidItem.getPrice() >= autoItem.getMaxPrice())
                     continue;
 
                 long addMore = bidItem.getPrice() >= 500000 ? 5000 : 1000;

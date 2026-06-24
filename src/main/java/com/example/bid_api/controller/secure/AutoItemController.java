@@ -20,7 +20,7 @@ public class AutoItemController {
     private final AutoItemService autoItemService;
 
     @PostMapping("/import")
-    public BaseResponse<Void> list(@RequestBody AutoItemFileRequest request) {
+    public BaseResponse<Void> upload(@RequestBody AutoItemFileRequest request) {
         autoItemService.extractCsvFile(request.getResourceId());
 
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully");
@@ -32,13 +32,19 @@ public class AutoItemController {
     }
 
     @PostMapping("/delete/{itemId}")
-    public BaseResponse<Object> getList(@PathVariable("itemId") String itemId) {
+    public BaseResponse<Object> deleteItem(@PathVariable("itemId") String itemId) {
         autoItemService.delete(itemId);
         return new BaseResponse<>(HttpStatus.OK.value(), "Delete successfully");
     }
 
+    @PostMapping("/delete/all")
+    public BaseResponse<Object> deleteALl() {
+        autoItemService.deleteAll();
+        return new BaseResponse<>(HttpStatus.OK.value(), "Delete all successfully");
+    }
+
     @PostMapping("/edit")
-    public BaseResponse<Object> getList(@RequestBody AutoItemRequest request) {
+    public BaseResponse<Object> editItem(@RequestBody AutoItemRequest request) {
         autoItemService.edit(request);
         return new BaseResponse<>(HttpStatus.OK.value(), "Delete successfully");
     }

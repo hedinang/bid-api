@@ -17,6 +17,8 @@ public interface AutoItemService {
 
     void delete(String itemId);
 
+    void deleteAll();
+
     void edit(AutoItemRequest request);
 
     ScanDto executeTrigger(ScanRequest request);
