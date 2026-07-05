@@ -47,7 +47,7 @@ public class AutoItemServiceImpl implements AutoItemService {
 
     private final HtmlUtil htmlUtil;
 
-    private long runningMinutes = 3;
+    private long runningMinutes = 4;
     private Instant startTime;
     private Long maxRunningMinutes;
     private final TaskScheduler taskScheduler;
@@ -255,7 +255,7 @@ public class AutoItemServiceImpl implements AutoItemService {
     }
 
     public List<BidItem> extractHigherBid(int page) {
-        String html = htmlUtil.cloneHtml("https://www.ecoauc.com/client/mylist?limit=50&is_other_bid=1&sortKey=1&tableType=list&q=&low=&high=&master_item_brands=&auction_lane_id=&master_item_categories=&master_item_shapes=&is_bid=1&master_item_ranks=" + "&page=" + page);
+        String html = htmlUtil.cloneHtml("https://www.ecoauc.com/client/mylist?limit=100&is_other_bid=1&sortKey=1&tableType=list&q=&low=&high=&master_item_brands=&auction_lane_id=&master_item_categories=&master_item_shapes=&is_bid=1&master_item_ranks=" + "&page=" + page);
 
         List<String> blocks = extractItemBlocks(html);
 
@@ -374,16 +374,12 @@ public class AutoItemServiceImpl implements AutoItemService {
         return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
-    private void t() {
-        log.info("test");
-    }
-
     private void scanAutoItems() {
         try {
             int totalItem = bidService.getTotalItem("https://www.ecoauc.com/client/mylist?is_bid=1&is_other_bid=1&sortKey=1&limit=50&q=&master_item_ranks=&auction_lane_id=&tableType=list"
             );
 
-            int pages = (int) Math.ceil((double) totalItem / 50);
+            int pages = (int) Math.ceil((double) totalItem / 100);
 
             List<BidItem> higherBidItems = new ArrayList<>();
 
