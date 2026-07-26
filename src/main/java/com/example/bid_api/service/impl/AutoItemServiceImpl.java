@@ -19,6 +19,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -254,10 +258,14 @@ public class AutoItemServiceImpl implements AutoItemService {
         }
     }
 
+    public List<BidItem> test() {
+        return extractHigherBid(0);
+    }
+
     public List<BidItem> extractHigherBid(int page) {
         String html = htmlUtil.cloneHtml("https://www.ecoauc.com/client/mylist?limit=100&is_other_bid=1&sortKey=1&tableType=list&q=&low=&high=&master_item_brands=&auction_lane_id=&master_item_categories=&master_item_shapes=&is_bid=1&master_item_ranks=" + "&page=" + page);
 
-        List<String> blocks = extractItemBlocks(html);
+        List<String> blocks = newExtractItemBlocks(html);
 
         List<BidItem> bidItems = blocks.stream().map(block -> {
             BidItem item = new BidItem();
@@ -293,6 +301,24 @@ public class AutoItemServiceImpl implements AutoItemService {
 
         return blocks;
     }
+
+    public static List<String> newExtractItemBlocks(String html) {
+        Document doc = Jsoup.parse(html);
+
+        Elements cards = doc.select("div.mb-grid-card");
+
+        List<String> blocks = new ArrayList<>();
+
+        for (Element card : cards) {
+            if (card.selectFirst(".card-title-block") != null
+                    && card.text().contains("Bid price")) {
+                blocks.add(card.outerHtml());
+            }
+        }
+
+        return blocks;
+    }
+
 
     public static String extractItemNumber(String block) {
         Pattern pattern = Pattern.compile(

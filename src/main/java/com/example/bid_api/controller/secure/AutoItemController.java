@@ -64,4 +64,6 @@ public class AutoItemController {
     public BaseResponse<ScanDto> checkScan() {
         return Response.toData(autoItemService.checkScan());
     }
+
+
 }

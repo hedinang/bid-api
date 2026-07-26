@@ -7,6 +7,7 @@ import com.example.bid_api.model.request.AutoItemRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.request.ScanRequest;
 import com.example.bid_api.model.search.AutoItemSearch;
+import com.example.bid_api.service.impl.AutoItemServiceImpl;
 
 import java.util.List;
 
@@ -26,4 +27,6 @@ public interface AutoItemService {
     void stopTrigger();
 
     ScanDto checkScan();
+
+    List<AutoItemServiceImpl.BidItem> test();
 }
