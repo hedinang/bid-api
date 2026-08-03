@@ -48,20 +48,14 @@ public class OrderServiceImpl implements OrderService {
 
     public Order storeOrder(OrderRequest request, User user) {
         //verify item
-        List<Item> itemList = itemRepository.findByItemId(request.getItemId());
+        List<Item> itemList = itemRepository.findByItemIdAndBidId(request.getItemId(), request.getBidId());
         if (itemList.isEmpty()) return null;
 
         Item item = itemList.get(itemList.size() - 1);
 
-        Order order;
+        Order order = orderRepository.findByItemIdAndUserIdAndBidId(request.getItemId(), user.getUserId(), request.getBidId());
 
-        if (request.getOrderId() != null) {
-            order = orderRepository.findByOrderId(request.getOrderId());
-
-            if (order == null) {
-                return null;
-            }
-
+        if (order != null) {
             order.setBidPrice(request.getBidPrice());
             order.setType(OrderStepType.ORDER.toString());
             order.setUpdatedAt(DateUtil.formatDateTime(new Date()));
