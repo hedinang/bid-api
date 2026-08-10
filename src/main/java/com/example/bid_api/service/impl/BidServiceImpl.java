@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +37,12 @@ public class BidServiceImpl implements BidService {
 
     @Value("${bid-email-password}")
     String bidEmailPass;
+
+    List<String> categories = Arrays.asList("3", "4", "24");
+
+    String conditions = IntStream.range(0, categories.size())
+            .mapToObj(i -> "master_item_categories%5B" + i + "%5D=" + categories.get(i))
+            .collect(Collectors.joining("&", "&", ""));
 
     @Override
     public List<Bid> getList() {
@@ -68,7 +75,7 @@ public class BidServiceImpl implements BidService {
 
         List<Bid> needingStoreBids = new ArrayList<>(bids.stream().map(bid -> {
             // temporarily store &master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4
-            int totalItem = getTotalItem(bid.getDetailUrl() + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4");
+            int totalItem = getTotalItem(bid.getDetailUrl() + conditions);
 
             if (existedDetailUrls.contains(bid.getDetailUrl())) {
                 Bid existedBid = existedMap.get(bid.getDetailUrl());
@@ -278,13 +285,7 @@ public class BidServiceImpl implements BidService {
 
     private List<String> syncItem(String clientUrl, int page) {
 //        "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4"
-        List<String> categories = Arrays.asList("3", "4", "24");
-
         try {
-            String conditions = categories.stream()
-                    .map(category -> "&master_item_categories%5B0%5D=" + category)
-                    .collect(Collectors.joining());
-
             String html = htmlUtil.cloneHtml(clientUrl + conditions + "&page=" + page + "&tableType=list");
 
             if (html == null || html.isEmpty()) {
