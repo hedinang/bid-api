@@ -428,15 +428,14 @@ public class AutoItemServiceImpl implements AutoItemService {
             for (AutoItem autoItem : autoItems) {
                 BidItem bidItem = higherBidMap.get(autoItem.getItemNumber());
 
-                if (bidItem == null || autoItem.getMaxPrice() == 0 || bidItem.getPrice() >= autoItem.getMaxPrice())
+                if (bidItem == null || autoItem.getMaxPrice() == 0)
                     continue;
-
-                long addMore = bidItem.getPrice() >= 500000 ? 5000 : 1000;
 
                 htmlUtil.bidTimelimit(
                         "13393",
                         autoItem.getItemId(),
-                        bidItem.getPrice() + addMore
+                        bidItem.getPrice(),
+                        autoItem.getMaxPrice()
                 );
             }
         } catch (Exception e) {

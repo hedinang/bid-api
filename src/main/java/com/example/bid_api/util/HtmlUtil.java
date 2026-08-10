@@ -1,6 +1,8 @@
 package com.example.bid_api.util;
 
 import com.example.bid_api.model.dto.EcoSession;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -17,6 +19,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -247,25 +250,25 @@ public class HtmlUtil {
         String loginUrl = "https://www.ecoauc.com/client/users/sign-in";
         try {
 
-        Connection.Response loginPage = Jsoup.connect(loginUrl)
-                .method(Connection.Method.GET)
-                .execute();
+            Connection.Response loginPage = Jsoup.connect(loginUrl)
+                    .method(Connection.Method.GET)
+                    .execute();
 
-        Map<String, String> cookies = new HashMap<>(loginPage.cookies());
+            Map<String, String> cookies = new HashMap<>(loginPage.cookies());
 
-        String csrfToken = cookies.get("csrfToken");
+            String csrfToken = cookies.get("csrfToken");
 
-        Connection.Response loginResponse = Jsoup.connect("https://www.ecoauc.com/client/users/post-sign-in")
-                .cookies(cookies)
-                .data("_csrfToken", csrfToken)
-                .data("email_address", bidEmailAddress)
-                .data("password", bidEmailPass)
-                .data("remember-me", "remember-me")
-                .method(Connection.Method.POST)
-                .execute();
+            Connection.Response loginResponse = Jsoup.connect("https://www.ecoauc.com/client/users/post-sign-in")
+                    .cookies(cookies)
+                    .data("_csrfToken", csrfToken)
+                    .data("email_address", bidEmailAddress)
+                    .data("password", bidEmailPass)
+                    .data("remember-me", "remember-me")
+                    .method(Connection.Method.POST)
+                    .execute();
 
-        cookies.putAll(loginResponse.cookies());
-        return cookies;
+            cookies.putAll(loginResponse.cookies());
+            return cookies;
 
 //        String cakephp = cookies.get("CAKEPHP");
 //        csrfToken = cookies.get("csrfToken");
@@ -274,8 +277,6 @@ public class HtmlUtil {
         }
         return null;
     }
-
-
 
 
     public static String extractCsrfToken(String html) {
@@ -398,12 +399,6 @@ public class HtmlUtil {
     }
 
 
-
-
-
-
-
-
     private final CookieManager cookieManager = new CookieManager();
     private final HttpClient client = HttpClient.newBuilder()
             .cookieHandler(cookieManager)
@@ -453,13 +448,18 @@ public class HtmlUtil {
         System.out.println("cookies = " + cookieManager.getCookieStore().getCookies());
     }
 
-    public String bidTimelimit(String userId, String auctionItemId, long bidPrice) throws Exception {
+    public String bidTimelimit(String userId, String auctionItemId, long bidPrice, long maxPrice) throws Exception {
+        long addMore = bidPrice >= 500000 ? 5000 : 1000;
+        long realBidPrice = bidPrice + addMore;
+
+        if (realBidPrice >= maxPrice) return null;
+
         String csrfToken = getCookieValue("csrfToken");
 
         String body =
                 "user_id=" + URLEncoder.encode(userId, StandardCharsets.UTF_8) +
                         "&auction_item_id=" + URLEncoder.encode(auctionItemId, StandardCharsets.UTF_8) +
-                        "&bid_price=" + URLEncoder.encode(String.valueOf(bidPrice), StandardCharsets.UTF_8) +
+                        "&bid_price=" + URLEncoder.encode(String.valueOf(realBidPrice), StandardCharsets.UTF_8) +
                         "&_csrfToken=" + URLEncoder.encode(csrfToken, StandardCharsets.UTF_8);
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -477,10 +477,17 @@ public class HtmlUtil {
         HttpResponse<String> response =
                 client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        System.out.println("bid status = " + response.statusCode());
-        System.out.println("bid body = " + response.body());
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode json = mapper.readTree(response.body());
 
-        return response.body();
+        String status = json.get("status").asText();
+        String message = json.get("message").asText();
+
+        if (Objects.equals(status, "failure") && Objects.equals(message, "Please type more higher than bid highest price")) {
+            bidTimelimit(userId, auctionItemId, realBidPrice, maxPrice);
+        }
+
+        return null;
     }
 
     private String getCookieValue(String name) {

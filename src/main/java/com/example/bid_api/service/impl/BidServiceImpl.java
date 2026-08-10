@@ -277,8 +277,15 @@ public class BidServiceImpl implements BidService {
     }
 
     private List<String> syncItem(String clientUrl, int page) {
+//        "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4"
+        List<String> categories = Arrays.asList("3", "4", "24");
+
         try {
-            String html = htmlUtil.cloneHtml(clientUrl + "&master_item_categories%5B0%5D=3&master_item_categories%5B1%5D=4" + "&page=" + page + "&tableType=list");
+            String conditions = categories.stream()
+                    .map(category -> "&master_item_categories%5B0%5D=" + category)
+                    .collect(Collectors.joining());
+
+            String html = htmlUtil.cloneHtml(clientUrl + conditions + "&page=" + page + "&tableType=list");
 
             if (html == null || html.isEmpty()) {
                 return new ArrayList<>();
