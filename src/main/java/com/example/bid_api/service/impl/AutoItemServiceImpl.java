@@ -258,8 +258,17 @@ public class AutoItemServiceImpl implements AutoItemService {
         }
     }
 
-    public List<BidItem> test() {
-        return extractHigherBid(0);
+    public List<BidItem> test() throws Exception {
+//        return extractHigherBid(0);
+        htmlUtil.login();
+        htmlUtil.bidTimelimit(
+                "13393",
+                "10134087",
+                365000,
+                367000
+        );
+
+        return null;
     }
 
     public List<BidItem> extractHigherBid(int page) {

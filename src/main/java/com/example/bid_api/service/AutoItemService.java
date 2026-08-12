@@ -28,5 +28,5 @@ public interface AutoItemService {
 
     ScanDto checkScan();
 
-    List<AutoItemServiceImpl.BidItem> test();
+    List<AutoItemServiceImpl.BidItem> test() throws Exception;
 }

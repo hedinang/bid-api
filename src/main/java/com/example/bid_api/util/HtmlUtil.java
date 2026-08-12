@@ -3,6 +3,7 @@ package com.example.bid_api.util;
 import com.example.bid_api.model.dto.EcoSession;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -448,7 +449,7 @@ public class HtmlUtil {
         System.out.println("cookies = " + cookieManager.getCookieStore().getCookies());
     }
 
-    public String bidTimelimit(String userId, String auctionItemId, long bidPrice, long maxPrice) throws Exception {
+    public String bidTimelimit2(String userId, String auctionItemId, long bidPrice, long maxPrice) throws Exception {
         long addMore = bidPrice >= 500000 ? 5000 : 1000;
         long realBidPrice = bidPrice + addMore;
 
@@ -488,6 +489,86 @@ public class HtmlUtil {
         }
 
         return null;
+    }
+
+    public String bidTimelimit(
+            String userId,
+            String auctionItemId,
+            long bidPrice,
+            long maxPrice
+    ) throws Exception {
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        long currentBid = bidPrice;
+
+        while (true) {
+            long addMore = currentBid >= 500000 ? 5000 : 1000;
+            long realBidPrice = currentBid + addMore;
+
+            if (realBidPrice >= maxPrice) {
+                return null;
+            }
+
+            String csrfToken = getCookieValue("csrfToken");
+
+            ObjectNode bodyJson = mapper.createObjectNode();
+            bodyJson.put("user_id", userId);
+            bodyJson.put("auction_item_id", Long.parseLong(auctionItemId));
+            bodyJson.put("bid_price", realBidPrice);
+
+            String body = mapper.writeValueAsString(bodyJson);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(
+                            "https://www.ecoauc.com/client/api/timelimit-auctions/bid"
+                    ))
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .header("User-Agent", UA)
+                    .header("Accept", "*/*")
+                    .header("Content-Type", "application/json")
+                    .header("X-CSRF-Token", csrfToken)
+                    .header("Origin", "https://www.ecoauc.com")
+                    .header(
+                            "Referer",
+                            "https://www.ecoauc.com/client/mylist?is_bid=1&sortKey=1&limit=50&q=&master_item_ranks=&auction_lane_id=&tableType=list"
+                    )
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<String> response =
+                    client.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            System.out.println("HTTP: " + response.statusCode());
+            System.out.println("REQUEST: " + body);
+            System.out.println("RESPONSE: " + response.body());
+
+            if (response.statusCode() != 200) {
+                throw new RuntimeException(
+                        "Bid HTTP error: "
+                                + response.statusCode()
+                                + " - "
+                                + response.body()
+                );
+            }
+
+            JsonNode json = mapper.readTree(response.body());
+
+            String status = json.path("status").asText();
+            String message = json.path("message").asText();
+
+            if ("failure".equals(status)
+                    && "Please type more higher than bid highest price".equals(message)) {
+
+                currentBid = realBidPrice;
+                continue;
+            }
+
+            return response.body();
+        }
     }
 
     private String getCookieValue(String name) {

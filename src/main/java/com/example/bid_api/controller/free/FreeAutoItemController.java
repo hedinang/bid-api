@@ -18,7 +18,7 @@ public class FreeAutoItemController {
     private final AutoItemService autoItemService;
 
     @PostMapping("/test")
-    public BaseResponse<List<AutoItemServiceImpl.BidItem>> test() {
+    public BaseResponse<List<AutoItemServiceImpl.BidItem>> test() throws Exception {
         return Response.toData(autoItemService.test());
     }
 }
