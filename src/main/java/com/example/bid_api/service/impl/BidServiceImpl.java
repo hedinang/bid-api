@@ -38,7 +38,7 @@ public class BidServiceImpl implements BidService {
     @Value("${bid-email-password}")
     String bidEmailPass;
 
-    List<String> categories = Arrays.asList("3", "4", "24");
+    List<String> categories = Arrays.asList("3", "4", "16", "24");
 
     String conditions = IntStream.range(0, categories.size())
             .mapToObj(i -> "master_item_categories%5B" + i + "%5D=" + categories.get(i))
@@ -239,7 +239,7 @@ public class BidServiceImpl implements BidService {
                 Bid bid = bidRepository.findByBidIdAndBidStatus(bidRequest.getBidId(), bidRequest.getBidStatus());
 
                 for (int page = bid.getDonePage(); page > 0; page--) {
-                    List<String> itemUrls = syncItem(bid.getDetailUrl(), 1);
+                    List<String> itemUrls = syncItem(bid.getDetailUrl(), page);
                     List<Item> itemList = itemUrls.stream().map(url -> {
                         Item item = new Item();
                         item.setBidId(bid.getBidId());
