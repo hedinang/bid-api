@@ -11,8 +11,6 @@ public interface ItemRepository extends MongoRepository<Item, String>, CustomIte
 
     List<Item> findByItemId(String itemId);
 
-    List<Item> findByItemIdIn(List<String> itemIds);
-
     List<Item> findByItemIdAndBidId(String itemId, String bidId);
 }
 

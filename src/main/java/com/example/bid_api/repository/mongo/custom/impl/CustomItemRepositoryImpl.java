@@ -9,9 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -49,5 +52,72 @@ public class CustomItemRepositoryImpl implements CustomItemRepository {
             log.error("getList CustomTaskRepositoryImpl error : {}", e.getMessage());
             return null;
         }
+    }
+
+    @Override
+    public List<Item> pageItem(ItemRequest itemRequest) {
+        Query query = new Query();
+
+        query.addCriteria(Criteria.where("bid_id").is(itemRequest.getBidId()));
+        query.addCriteria(Criteria.where("bid_status").is(itemRequest.getBidStatus()));
+
+        if (itemRequest.getSearchBranch() != null
+                && !itemRequest.getSearchBranch().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("branch").is(itemRequest.getSearchBranch().trim())
+            );
+        }
+
+        if (itemRequest.getSearchRank() != null
+                && !itemRequest.getSearchRank().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("rank").is(itemRequest.getSearchRank().trim())
+            );
+        }
+
+        if (itemRequest.getSearchCategory() != null
+                && !itemRequest.getSearchCategory().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("category").is(itemRequest.getSearchCategory().trim())
+            );
+        }
+
+        long skip = (long) (itemRequest.getPage() - 1) * itemRequest.getLimit();
+
+        query.skip(skip);
+        query.limit(itemRequest.getLimit());
+
+        return mongoTemplate.find(query, Item.class);
+    }
+
+    @Override
+    public Long countItem(ItemRequest itemRequest) {
+        Query query = new Query();
+
+        query.addCriteria(Criteria.where("bid_id").is(itemRequest.getBidId()));
+        query.addCriteria(Criteria.where("bid_status").is(itemRequest.getBidStatus()));
+
+        if (itemRequest.getSearchBranch() != null
+                && !itemRequest.getSearchBranch().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("branch").is(itemRequest.getSearchBranch().trim())
+            );
+        }
+
+        if (itemRequest.getSearchRank() != null
+                && !itemRequest.getSearchRank().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("rank").is(itemRequest.getSearchRank().trim())
+            );
+        }
+
+        if (itemRequest.getSearchCategory() != null
+                && !itemRequest.getSearchCategory().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("category").is(itemRequest.getSearchCategory().trim())
+            );
+        }
+
+        return mongoTemplate.count(query, Item.class);
     }
 }

@@ -2,6 +2,7 @@ package com.example.bid_api.service.impl;
 
 import com.example.bid_api.mapper.ItemMapper;
 import com.example.bid_api.model.dto.ItemDto;
+import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.Item;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
@@ -27,9 +28,12 @@ public class ItemServiceImpl implements ItemService {
     private final OrderRepository orderRepository;
     private final ItemMapper itemMapper;
 
-    @Override
-    public List<ItemDto> getList(ItemRequest itemRequest, User user) {
-        List<Item> itemList = itemRepository.getList(itemRequest).getMappedResults();
+    public Page<ItemDto> getPage(ItemRequest itemRequest, User user) {
+        return new Page<>(pageItem(itemRequest, user), itemRepository.countItem(itemRequest));
+    }
+
+    private List<ItemDto> pageItem(ItemRequest itemRequest, User user) {
+        List<Item> itemList = itemRepository.pageItem(itemRequest);
         List<String> itemIds = itemList.stream().map(Item::getItemId).toList();
         List<ItemDto> itemDtoList = itemList.stream().map(itemMapper::itemToItemDto).toList();
 
