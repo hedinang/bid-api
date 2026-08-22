@@ -22,5 +22,7 @@ public interface BidService {
 
     void deleteBid(DeleteBidRequest deleteBidRequest);
 
+    void deleteLteBid(DeleteBidRequest deleteBidRequest);
+
     int getTotalItem(String clientUrl);
 }

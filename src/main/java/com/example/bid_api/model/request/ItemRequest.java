@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ItemRequest {
-    String bidId;
+    int bidId;
     String bidStatus;
     int limit;
     int page;

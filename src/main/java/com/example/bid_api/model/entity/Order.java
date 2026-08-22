@@ -24,7 +24,7 @@ public class Order extends MongoBaseEntity {
     @Field(name = "user_id")
     private String userId;
     @Field(name = "bid_id")
-    private String bidId;
+    private Integer bidId;
     @Field(name = "item_id")
     private String itemId;
     @Field(name = "bid_price")

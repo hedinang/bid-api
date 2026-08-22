@@ -9,6 +9,7 @@ import com.example.bid_api.model.entity.Item;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
 import com.example.bid_api.model.request.ChangeStatusRequest;
+import com.example.bid_api.model.request.DeleteBidRequest;
 import com.example.bid_api.model.request.OrderRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.search.OrderSearch;
@@ -183,5 +184,9 @@ public class OrderServiceImpl implements OrderService {
 
     public void changeStatusByItemDate(ChangeStatusRequest request, User user) {
         orderRepository.updateItemDate(request);
+    }
+
+    public void deleteLteBid(DeleteBidRequest deleteBidRequest){
+        orderRepository.deleteByBidIdLessThan(deleteBidRequest.getBidId());
     }
 }

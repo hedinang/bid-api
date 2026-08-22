@@ -69,7 +69,7 @@ public class BidServiceImpl implements BidService {
         Map<String, Bid> existedMap = existedBids.stream().collect(Collectors.toMap(Bid::getDetailUrl, bid -> bid, (a, b) -> a));
 
         List<String> existedDetailUrls = existedBids.stream().map(Bid::getDetailUrl).toList();
-        List<String> bidIds = bids.stream().map(Bid::getBidId).toList();
+        List<Integer> bidIds = bids.stream().map(Bid::getBidId).toList();
         List<Bid> closedBids = bidRepository.findByClosedAndBidIdNotIn(false, bidIds);
         closedBids.forEach(closedBid -> closedBid.setClosed(true));
 
@@ -188,7 +188,7 @@ public class BidServiceImpl implements BidService {
         return "https://www.ecoauc.com" + link;
     }
 
-    public static String extractAuctionId(String url) {
+    public static Integer extractAuctionId(String url) {
 
         Pattern pattern =
                 Pattern.compile("[?&]auctions=(\\d+)");
@@ -196,10 +196,10 @@ public class BidServiceImpl implements BidService {
         Matcher matcher = pattern.matcher(url);
 
         if (matcher.find()) {
-            return matcher.group(1);
+            return Integer.parseInt(matcher.group(1));
         }
 
-        return "0";
+        return 0;
     }
 
     public static int extractTotal(String text) {
@@ -262,7 +262,9 @@ public class BidServiceImpl implements BidService {
                         return item;
                     }).toList();
 
-                    List<String> existedItemIds = itemRepository.findByBidIdIn(itemList.stream().map(Item::getBidId).toList()).stream().map(Item::getBidId).toList();
+                    List<Integer> existedItemIds = itemRepository.findByBidIdIn(
+                                    itemList.stream().map(Item::getBidId).toList())
+                            .stream().map(Item::getBidId).toList();
                     List<Item> newItems = itemList.stream().filter(i -> !existedItemIds.contains(i.getItemId())).toList();
                     itemRepository.saveAll(newItems);
                     bid.setDonePage(page - 1);
@@ -338,6 +340,13 @@ public class BidServiceImpl implements BidService {
     @Override
     public void deleteBid(DeleteBidRequest deleteBidRequest) {
         bidRepository.deleteByUniqueId(deleteBidRequest.getUniqueId());
+    }
+
+    @Override
+    @Transactional
+    public void deleteLteBid(DeleteBidRequest deleteBidRequest) {
+        bidRepository.deleteByBidIdLessThan(deleteBidRequest.getBidId());
+        itemRepository.deleteByBidIdLessThan(deleteBidRequest.getBidId());
     }
 
     /* detail */

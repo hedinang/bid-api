@@ -23,7 +23,7 @@ public class Item extends MongoBaseEntity {
     private String itemId;
 
     @Field(name = "bid_id")
-    private String bidId;
+    private Integer bidId;
 
     @Field(name = "bid_status")
     private String bidStatus;

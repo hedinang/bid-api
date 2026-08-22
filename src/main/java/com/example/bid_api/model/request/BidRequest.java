@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BidRequest {
-    String bidId;
+    Integer bidId;
     String bidStatus;
 }

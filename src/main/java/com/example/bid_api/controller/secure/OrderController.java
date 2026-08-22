@@ -5,6 +5,7 @@ import com.example.bid_api.model.dto.Page;
 import com.example.bid_api.model.entity.Order;
 import com.example.bid_api.model.entity.User;
 import com.example.bid_api.model.request.ChangeStatusRequest;
+import com.example.bid_api.model.request.DeleteBidRequest;
 import com.example.bid_api.model.request.OrderRequest;
 import com.example.bid_api.model.request.PageRequest;
 import com.example.bid_api.model.search.OrderSearch;
@@ -54,5 +55,11 @@ public class OrderController {
     public BaseResponse changeStatusByItemDate(@RequestBody ChangeStatusRequest request, @AuthenticationPrincipal User user) {
         orderService.changeStatusByItemDate(request, user);
         return null;
+    }
+
+    @PostMapping("delete-lte-order")
+    public BaseResponse<String> deleteLteBid(@RequestBody DeleteBidRequest deleteBidRequest) {
+        orderService.deleteLteBid(deleteBidRequest);
+        return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", null);
     }
 }

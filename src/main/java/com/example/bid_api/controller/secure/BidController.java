@@ -1,6 +1,5 @@
 package com.example.bid_api.controller.secure;
 
-import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.request.BidRequest;
 import com.example.bid_api.model.request.DeleteBidRequest;
 import com.example.bid_api.model.request.ThreadStopRequest;
@@ -8,9 +7,11 @@ import com.example.bid_api.service.BidService;
 import com.example.bid_api.util.response.BaseResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -46,6 +47,12 @@ public class BidController {
     @PostMapping("delete")
     public BaseResponse<String> deleteBid(@RequestBody DeleteBidRequest deleteBidRequest) {
         bidService.deleteBid(deleteBidRequest);
+        return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", null);
+    }
+
+    @PostMapping("delete-lte-bid")
+    public BaseResponse<String> deleteLteBid(@RequestBody DeleteBidRequest deleteBidRequest) {
+        bidService.deleteLteBid(deleteBidRequest);
         return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", null);
     }
 }

@@ -9,4 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class DeleteBidRequest {
     String uniqueId;
+
+    Integer bidId;
 }

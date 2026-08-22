@@ -7,10 +7,12 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
 public interface ItemRepository extends MongoRepository<Item, String>, CustomItemRepository {
-    List<Item> findByBidIdIn(List<String> bidIds);
+    List<Item> findByBidIdIn(List<Integer> bidIds);
 
     List<Item> findByItemId(String itemId);
 
-    List<Item> findByItemIdAndBidId(String itemId, String bidId);
+    List<Item> findByItemIdAndBidId(String itemId, Integer bidId);
+
+    long deleteByBidIdLessThan(Integer bidId);
 }
 
