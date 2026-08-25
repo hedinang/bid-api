@@ -23,6 +23,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -50,6 +51,9 @@ public class AutoItemServiceImpl implements AutoItemService {
     private final BidService bidService;
 
     private final HtmlUtil htmlUtil;
+
+    @Value("${number-of-scan}")
+    int numberOfScan;
 
     private long runningMinutes = 4;
     private Instant startTime;
@@ -414,7 +418,7 @@ public class AutoItemServiceImpl implements AutoItemService {
             int totalItem = bidService.getTotalItem("https://www.ecoauc.com/client/mylist?is_bid=1&is_other_bid=1&sortKey=1&limit=50&q=&master_item_ranks=&auction_lane_id=&tableType=list"
             );
 
-            int pages = (int) Math.ceil((double) totalItem / 100);
+            int pages = (int) Math.ceil((double) totalItem / numberOfScan);
 
             List<BidItem> higherBidItems = new ArrayList<>();
 

@@ -1,5 +1,6 @@
 package com.example.bid_api.service;
 
+import com.example.bid_api.model.dto.CategorySummaryDto;
 import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.request.BidRequest;
 import com.example.bid_api.model.request.DeleteBidRequest;
@@ -25,4 +26,6 @@ public interface BidService {
     void deleteLteBid(DeleteBidRequest deleteBidRequest);
 
     int getTotalItem(String clientUrl);
+
+    List<CategorySummaryDto> getCategoryList();
 }

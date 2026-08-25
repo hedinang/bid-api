@@ -1,5 +1,6 @@
 package com.example.bid_api.service.impl;
 
+import com.example.bid_api.model.dto.CategorySummaryDto;
 import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.entity.Item;
 import com.example.bid_api.model.request.BidRequest;
@@ -347,6 +348,26 @@ public class BidServiceImpl implements BidService {
     public void deleteLteBid(DeleteBidRequest deleteBidRequest) {
         bidRepository.deleteByBidIdLessThan(deleteBidRequest.getBidId());
         itemRepository.deleteByBidIdLessThan(deleteBidRequest.getBidId());
+    }
+
+    @Override
+    @Transactional
+    public List<CategorySummaryDto> getCategoryList() {
+        List<Bid> bidList = bidRepository.findByClosed(false);
+        List<Integer> bidIds = bidList.stream().map(Bid::getBidId).toList();
+        List<Item> itemList = itemRepository.findByBidIdIn(bidIds);
+
+        int jewelryCount = (int) itemList.stream().filter(item -> "Jewelry".equalsIgnoreCase(item.getCategory())).count();
+        int accessoryCount = (int) itemList.stream().filter(item -> "Accessory".equalsIgnoreCase(item.getCategory())).count();
+        int musicalInstrumentCount = (int) itemList.stream().filter(item -> "Musical instrument".equalsIgnoreCase(item.getCategory())).count();
+        int smokingDeviceCount = (int) itemList.stream().filter(item -> "Smoking device".equalsIgnoreCase(item.getCategory())).count();
+
+        CategorySummaryDto jewelry = new CategorySummaryDto("Jewelry", jewelryCount);
+        CategorySummaryDto accessory = new CategorySummaryDto("Accessory", accessoryCount);
+        CategorySummaryDto musicalInstrument = new CategorySummaryDto("Musical instrument", musicalInstrumentCount);
+        CategorySummaryDto smokingDevice = new CategorySummaryDto("Smoking device", smokingDeviceCount);
+
+        return List.of(jewelry, accessory, musicalInstrument, smokingDevice);
     }
 
     /* detail */

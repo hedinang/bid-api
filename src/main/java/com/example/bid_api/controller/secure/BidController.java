@@ -1,5 +1,6 @@
 package com.example.bid_api.controller.secure;
 
+import com.example.bid_api.model.dto.CategorySummaryDto;
 import com.example.bid_api.model.request.BidRequest;
 import com.example.bid_api.model.request.DeleteBidRequest;
 import com.example.bid_api.model.request.ThreadStopRequest;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -54,5 +56,10 @@ public class BidController {
     public BaseResponse<String> deleteLteBid(@RequestBody DeleteBidRequest deleteBidRequest) {
         bidService.deleteLteBid(deleteBidRequest);
         return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", null);
+    }
+
+    @PostMapping("category-list")
+    public BaseResponse<List<CategorySummaryDto>> getCategoryList() {
+        return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", bidService.getCategoryList());
     }
 }
