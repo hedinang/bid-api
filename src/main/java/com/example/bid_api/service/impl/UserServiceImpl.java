@@ -42,7 +42,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     public Map<String, Object> loginUser(LoginRequest request) {
         try {
-            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(request.getUsername().toUpperCase(), request.getPassword());
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(request.getUsername().toUpperCase(),
+                    request.getPassword());
             Authentication authentication = authenticationManager.authenticate(authToken);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);

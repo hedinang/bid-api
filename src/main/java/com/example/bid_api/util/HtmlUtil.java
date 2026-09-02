@@ -502,7 +502,7 @@ public class HtmlUtil {
 
         long currentBid = bidPrice;
 
-        while (true) {
+//        while (true) {
             long addMore = currentBid >= 500000 ? 5000 : 1000;
             long realBidPrice = currentBid + addMore;
 
@@ -542,10 +542,6 @@ public class HtmlUtil {
                             HttpResponse.BodyHandlers.ofString()
                     );
 
-            System.out.println("HTTP: " + response.statusCode());
-            System.out.println("REQUEST: " + body);
-            System.out.println("RESPONSE: " + response.body());
-
             if (response.statusCode() != 200) {
                 throw new RuntimeException(
                         "Bid HTTP error: "
@@ -554,21 +550,21 @@ public class HtmlUtil {
                                 + response.body()
                 );
             }
-
-            JsonNode json = mapper.readTree(response.body());
-
-            String status = json.path("status").asText();
-            String message = json.path("message").asText();
-
-            if ("failure".equals(status)
-                    && "Please type more higher than bid highest price".equals(message)) {
-
-                currentBid = realBidPrice;
-                continue;
-            }
-
+//
+//            JsonNode json = mapper.readTree(response.body());
+//
+//            String status = json.path("status").asText();
+//            String message = json.path("message").asText();
+//
+//            if ("failure".equals(status)
+//                    && "Please type more higher than bid highest price".equals(message)) {
+//
+//                currentBid = realBidPrice;
+//                continue;
+//            }
+//
             return response.body();
-        }
+//        }
     }
 
     private String getCookieValue(String name) {
