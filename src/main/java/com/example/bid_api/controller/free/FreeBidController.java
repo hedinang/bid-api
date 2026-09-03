@@ -1,5 +1,6 @@
 package com.example.bid_api.controller.free;
 
+import com.example.bid_api.model.dto.CategorySummaryDto;
 import com.example.bid_api.model.entity.Bid;
 import com.example.bid_api.model.request.BidRequest;
 import com.example.bid_api.service.BidService;
@@ -24,5 +25,10 @@ public class FreeBidController {
     @PostMapping("/detail")
     public BaseResponse<Bid> get(@RequestBody BidRequest bidRequest) {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getBid(bidRequest));
+    }
+
+    @PostMapping("category-list")
+    public BaseResponse<List<CategorySummaryDto>> getCategoryList() {
+        return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", bidService.getCategoryList());
     }
 }

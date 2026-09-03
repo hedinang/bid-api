@@ -57,9 +57,4 @@ public class BidController {
         bidService.deleteLteBid(deleteBidRequest);
         return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", null);
     }
-
-    @PostMapping("category-list")
-    public BaseResponse<List<CategorySummaryDto>> getCategoryList() {
-        return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", bidService.getCategoryList());
-    }
 }

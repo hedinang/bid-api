@@ -58,8 +58,24 @@ public class CustomItemRepositoryImpl implements CustomItemRepository {
     public List<Item> pageItem(ItemRequest itemRequest) {
         Query query = new Query();
 
-        query.addCriteria(Criteria.where("bid_id").is(itemRequest.getBidId()));
-        query.addCriteria(Criteria.where("bid_status").is(itemRequest.getBidStatus()));
+        if (itemRequest.getBidIds() != null && !itemRequest.getBidIds().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("bid_id").in(itemRequest.getBidIds())
+            );
+        }
+
+        if (itemRequest.getBidId() != null) {
+            query.addCriteria(
+                    Criteria.where("bid_id").is(itemRequest.getBidId())
+            );
+        }
+
+        if (itemRequest.getBidStatus() != null
+                && !itemRequest.getBidStatus().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("bid_status").is(itemRequest.getBidStatus().trim())
+            );
+        }
 
         if (itemRequest.getSearchBranch() != null
                 && !itemRequest.getSearchBranch().trim().isEmpty()) {
@@ -94,8 +110,24 @@ public class CustomItemRepositoryImpl implements CustomItemRepository {
     public Long countItem(ItemRequest itemRequest) {
         Query query = new Query();
 
-        query.addCriteria(Criteria.where("bid_id").is(itemRequest.getBidId()));
-        query.addCriteria(Criteria.where("bid_status").is(itemRequest.getBidStatus()));
+        if (itemRequest.getBidIds() != null && !itemRequest.getBidIds().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("bid_id").in(itemRequest.getBidIds())
+            );
+        }
+
+        if (itemRequest.getBidId() != null) {
+            query.addCriteria(
+                    Criteria.where("bid_id").is(itemRequest.getBidId())
+            );
+        }
+
+        if (itemRequest.getBidStatus() != null
+                && !itemRequest.getBidStatus().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("bid_status").is(itemRequest.getBidStatus().trim())
+            );
+        }
 
         if (itemRequest.getSearchBranch() != null
                 && !itemRequest.getSearchBranch().trim().isEmpty()) {

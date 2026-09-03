@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,7 +49,25 @@ public class BidServiceImpl implements BidService {
 
     @Override
     public List<Bid> getList() {
-        return bidRepository.findByClosed(false);
+        List<Bid> bids = bidRepository.findByClosed(false);
+
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        LocalDateTime now = LocalDateTime.now();
+
+        return bids.stream()
+                .filter(bid -> {
+                    if (bid.getOpenTime() == null) {
+                        return false;
+                    }
+
+                    LocalDateTime openTime =
+                            LocalDateTime.parse(bid.getOpenTime(), formatter);
+
+                    return openTime.isAfter(now);
+                })
+                .toList();
     }
 
     @Override
