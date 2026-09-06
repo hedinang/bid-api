@@ -13,6 +13,10 @@ import com.example.bid_api.util.StringUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -84,7 +88,7 @@ public class BidServiceImpl implements BidService {
             return;
         }
 
-        List<Bid> bids = extractAuctionItems(html);
+        List<Bid> bids = extractAuctionItemsJsoup(html);
 
         List<Bid> existedBids = bidRepository.findByDetailUrlIn(bids.stream().map(Bid::getDetailUrl).toList());
         Map<String, Bid> existedMap = existedBids.stream().collect(Collectors.toMap(Bid::getDetailUrl, bid -> bid, (a, b) -> a));
@@ -174,6 +178,42 @@ public class BidServiceImpl implements BidService {
         }
 
         return result;
+    }
+
+    public static List<Bid> extractAuctionItemsJsoup(String html) {
+        List<Bid> result = new ArrayList<>();
+
+        Document document = Jsoup.parse(html);
+        Elements cards = document.select("section.top-auction-card > div");
+
+        for (Element card : cards) {
+            Element linkElement = card.selectFirst("a.all-link[href]");
+            if (linkElement == null) {
+                continue;
+            }
+
+            Bid bid = new Bid();
+
+            bid.setDetailUrl(toAbsoluteUrl(linkElement.attr("href")));
+            bid.setBidId(extractAuctionId(bid.getDetailUrl()));
+            bid.setTimeStatus(textOf(card.selectFirst(".market-info .box > span:nth-of-type(2)")));
+            bid.setBidStatus(textOf(card.selectFirst(".edge-triangle + .en")));
+            bid.setStartPreviewTime(StringUtil.convertEcoDate(
+                    textOf(card.selectFirst(".preview-box .box > span:first-child"))
+                            .replaceFirst("\\s*〜$", "")));
+            bid.setEndPreviewTime(StringUtil.convertEcoDate(
+                    textOf(card.selectFirst(".preview-box .box > span:nth-child(2)"))));
+            bid.setOpenTime(StringUtil.convertEcoDate(
+                    textOf(card.selectFirst(".datetime"))));
+
+            result.add(bid);
+        }
+
+        return result;
+    }
+
+    private static String textOf(Element element) {
+        return element == null ? "" : element.text().trim();
     }
 
     private static String extract(String text, String regex) {
@@ -270,14 +310,14 @@ public class BidServiceImpl implements BidService {
                         String html = htmlUtil.cloneHtml(url);
 
                         if (html != null && !html.isEmpty()) {
-                            item.setDetailUrls(extractImageUrls(html));
-                            item.setItemId(extractItemNo(html));
-                            item.setTitle(extractTitle(html));
-                            item.setDescription(extractNotes(html));
-                            item.setRank(extractRank(html));
-                            item.setBrand(extractBrand(html));
-                            item.setStartPrice(extractStartingPrice(html));
-                            item.setCategory(extractCategory(html));
+                            item.setDetailUrls(extractImageUrlsJsoup(html));
+                            item.setItemId(extractItemNoJsoup(html));
+                            item.setTitle(extractTitleJsoup(html));
+                            item.setDescription(extractNotesJsoup(html));
+                            item.setRank(extractRankJsoup(html));
+                            item.setBrand(extractBrandJsoup(html));
+                            item.setStartPrice(extractStartingPriceJsoup(html));
+                            item.setCategory(extractCategoryJsoup(html));
                         }
 
                         return item;
@@ -315,7 +355,7 @@ public class BidServiceImpl implements BidService {
                 return new ArrayList<>();
             }
 
-            List<String> itemUrls = extractItemDetailUrls(html).stream().distinct().toList();
+            List<String> itemUrls = extractItemDetailUrlsJsoup(html).stream().distinct().toList();
             return itemUrls;
         } catch (Exception e) {
             log.error(e.toString());
@@ -343,6 +383,24 @@ public class BidServiceImpl implements BidService {
             }
 
             urls.add(url);
+        }
+
+        return urls;
+    }
+
+    public static List<String> extractItemDetailUrlsJsoup(String html) {
+        List<String> urls = new ArrayList<>();
+        Document document = Jsoup.parse(html);
+
+        for (Element link : document.select("a[href*=/client/auction-items/view/]")) {
+            String href = link.attr("href").trim();
+            String itemPath = href.substring(href.indexOf("/client/auction-items/view/"));
+            String itemId = itemPath.substring("/client/auction-items/view/".length())
+                    .split("/", 2)[0];
+
+            if (itemId.chars().allMatch(Character::isDigit)) {
+                urls.add(toAbsoluteUrl(href));
+            }
         }
 
         return urls;
@@ -407,6 +465,20 @@ public class BidServiceImpl implements BidService {
         return new ArrayList<>(urls);
     }
 
+    public static List<String> extractImageUrlsJsoup(String html) {
+        Set<String> urls = new LinkedHashSet<>();
+        Document document = Jsoup.parse(html);
+
+        for (Element image : document.select(".swiper-slide img[data-zoom-image]")) {
+            String url = image.attr("data-zoom-image").trim();
+            if (!url.isEmpty()) {
+                urls.add(url);
+            }
+        }
+
+        return new ArrayList<>(urls);
+    }
+
     private String extractItemNo(String html) {
 
         Pattern pattern = Pattern.compile(
@@ -418,6 +490,19 @@ public class BidServiceImpl implements BidService {
 
         if (matcher.find()) {
             return matcher.group(1);
+        }
+
+        return "";
+    }
+
+    public static String extractItemNoJsoup(String html) {
+        Document document = Jsoup.parse(html);
+
+        for (Element element : document.select("small")) {
+            String text = element.text().trim();
+            if (text.startsWith("No.")) {
+                return text.substring("No.".length()).trim();
+            }
         }
 
         return "";
@@ -441,6 +526,19 @@ public class BidServiceImpl implements BidService {
         return "";
     }
 
+    public static String extractNotesJsoup(String html) {
+        Document document = Jsoup.parse(html);
+
+        for (Element paragraph : document.select("p")) {
+            String text = paragraph.text().trim();
+            if (text.startsWith("[Notes]")) {
+                return text.substring("[Notes]".length()).trim();
+            }
+        }
+
+        return "";
+    }
+
     public static String extractTitle(String html) {
 
         Pattern pattern = Pattern.compile(
@@ -455,6 +553,22 @@ public class BidServiceImpl implements BidService {
         }
 
         return "";
+    }
+
+    public static String extractTitleJsoup(String html) {
+        Document document = Jsoup.parse(html);
+        Element title = document.selectFirst(".head-title h2");
+
+        if (title == null) {
+            return "";
+        }
+
+        Element brand = title.selectFirst("small.show");
+        if (brand != null) {
+            brand.remove();
+        }
+
+        return title.text().trim();
     }
 
     public static String extractRank(String html) {
@@ -473,6 +587,13 @@ public class BidServiceImpl implements BidService {
         return "";
     }
 
+    public static String extractRankJsoup(String html) {
+        Document document = Jsoup.parse(html);
+        Element rank = document.selectFirst(".head-sticker .circle-text");
+
+        return rank == null ? "" : rank.ownText().trim();
+    }
+
     public static String extractBrand(String html) {
 
         Pattern pattern = Pattern.compile(
@@ -487,6 +608,13 @@ public class BidServiceImpl implements BidService {
         }
 
         return "";
+    }
+
+    public static String extractBrandJsoup(String html) {
+        Document document = Jsoup.parse(html);
+        Element brand = document.selectFirst(".head-title h2 small.show");
+
+        return brand == null ? "" : brand.text().trim();
     }
 
     public static String extractStartingPrice(String html) {
@@ -505,6 +633,13 @@ public class BidServiceImpl implements BidService {
         return "0";
     }
 
+    public static String extractStartingPriceJsoup(String html) {
+        Document document = Jsoup.parse(html);
+        Element value = findDefinitionValue(document, "Starting price");
+
+        return value == null ? "0" : digitsOnly(value.text());
+    }
+
     public static String extractCategory(String html) {
 
         Pattern pattern = Pattern.compile(
@@ -521,5 +656,34 @@ public class BidServiceImpl implements BidService {
         }
 
         return "";
+    }
+
+    public static String extractCategoryJsoup(String html) {
+        Document document = Jsoup.parse(html);
+        Element value = findDefinitionValue(document, "Category");
+
+        return value == null ? "" : value.text().trim();
+    }
+
+    private static Element findDefinitionValue(Document document, String label) {
+        for (Element term : document.select("dt")) {
+            if (label.equalsIgnoreCase(term.text().trim())) {
+                return term.nextElementSibling();
+            }
+        }
+
+        return null;
+    }
+
+    private static String digitsOnly(String value) {
+        StringBuilder digits = new StringBuilder();
+
+        for (char character : value.toCharArray()) {
+            if (Character.isDigit(character)) {
+                digits.append(character);
+            }
+        }
+
+        return digits.toString();
     }
 }
