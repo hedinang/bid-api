@@ -278,7 +278,7 @@ public class AutoItemServiceImpl implements AutoItemService {
     public List<BidItem> extractHigherBid(int page) {
         String html = htmlUtil.cloneHtml("https://www.ecoauc.com/client/mylist?limit=100&is_other_bid=1&sortKey=1&tableType=list&q=&low=&high=&master_item_brands=&auction_lane_id=&master_item_categories=&master_item_shapes=&is_bid=1&master_item_ranks=" + "&page=" + page);
 
-        List<String> blocks = newExtractItemBlocks(html);
+        List<String> blocks = extractItemBlocks(html);
 
         List<BidItem> bidItems = blocks.stream().map(block -> {
             BidItem item = new BidItem();
@@ -296,26 +296,7 @@ public class AutoItemServiceImpl implements AutoItemService {
         return bidItems;
     }
 
-    public static List<String> extractItemBlocks(String html) {
-        List<String> blocks = new ArrayList<>();
-
-        String marker = "<div class=\"col-sm-6 col-md-4 col-lg-3 mb-grid-card\">";
-
-        String[] parts = html.split(Pattern.quote(marker));
-
-        for (int i = 1; i < parts.length; i++) {
-            String block = marker + parts[i];
-
-            if (block.contains("card-title-block")
-                    && block.contains("Bid price")) {
-                blocks.add(block);
-            }
-        }
-
-        return blocks;
-    }
-
-    public static List<String> newExtractItemBlocks(String html) {
+    private List<String> extractItemBlocks(String html) {
         Document doc = Jsoup.parse(html);
 
         Elements cards = doc.select("div.mb-grid-card");
