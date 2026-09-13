@@ -276,6 +276,13 @@ public class BidServiceImpl implements BidService {
         return 0;
     }
 
+    public static int extractTotalJsoup(String html) {
+        Document document = Jsoup.parse(html);
+        Element total = document.selectFirst(".paginate-area .form-control-static");
+
+        return total == null ? 0 : extractTotal(total.text());
+    }
+
     @Override
     @Transactional
     public void stopThread(String threadName) {
@@ -413,7 +420,7 @@ public class BidServiceImpl implements BidService {
             return 0;
         }
 
-        return extractTotal(html);
+        return extractTotalJsoup(html);
     }
 
     @Override

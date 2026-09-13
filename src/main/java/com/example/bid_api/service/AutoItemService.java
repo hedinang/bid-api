@@ -22,7 +22,7 @@ public interface AutoItemService {
 
     void edit(AutoItemRequest request);
 
-    ScanDto executeTrigger(ScanRequest request);
+    ScanDto executeTrigger(ScanRequest request) throws Exception;
 
     void stopTrigger();
 

@@ -168,10 +168,10 @@ public class HtmlUtil {
                 .header("Content-Type", "application/json")
                 .header("X-CSRF-Token", csrfToken)
                 .header("Origin", "https://www.ecoauc.com")
-                .header(
-                        "Referer",
-                        "https://www.ecoauc.com/client/mylist?is_bid=1&sortKey=1&limit=50&q=&master_item_ranks=&auction_lane_id=&tableType=list"
-                )
+//                .header(
+//                        "Referer",
+//                        "https://www.ecoauc.com/client/mylist?is_bid=1&sortKey=1&limit=50&q=&master_item_ranks=&auction_lane_id=&tableType=list"
+//                )
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
 

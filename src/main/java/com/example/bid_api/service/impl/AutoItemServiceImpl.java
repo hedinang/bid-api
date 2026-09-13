@@ -55,7 +55,7 @@ public class AutoItemServiceImpl implements AutoItemService {
     @Value("${number-of-scan}")
     int numberOfScan;
 
-    private long runningMinutes = 4;
+    private long runningMinutes = 3;
     private Instant startTime;
     private Long maxRunningMinutes;
     private final TaskScheduler taskScheduler;
@@ -216,11 +216,13 @@ public class AutoItemServiceImpl implements AutoItemService {
 //        scanThread.start();
 //    }
 
-    public ScanDto executeTrigger(ScanRequest request) {
+    public ScanDto executeTrigger(ScanRequest request) throws Exception {
         stopTrigger();
 
         this.startTime = Instant.now();
         this.maxRunningMinutes = request.getMaxRunningMinutes();
+
+        htmlUtil.login();
 
         ScheduledFuture<?> runningFuture = taskScheduler.scheduleAtFixedRate(
                 this::scanAutoItems,
@@ -416,8 +418,6 @@ public class AutoItemServiceImpl implements AutoItemService {
 
             List<AutoItem> autoItems =
                     autoItemRepository.findByItemNumberIn(new ArrayList<>(higherBidMap.keySet()));
-
-            htmlUtil.login();
 
             for (AutoItem autoItem : autoItems) {
                 BidItem bidItem = higherBidMap.get(autoItem.getItemNumber());

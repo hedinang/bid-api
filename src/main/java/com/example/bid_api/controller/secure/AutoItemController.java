@@ -50,7 +50,7 @@ public class AutoItemController {
     }
 
     @PostMapping("/scan")
-    public BaseResponse<ScanDto> scan(@RequestBody ScanRequest request) {
+    public BaseResponse<ScanDto> scan(@RequestBody ScanRequest request) throws Exception {
         return Response.toData(autoItemService.executeTrigger(request));
     }
 
