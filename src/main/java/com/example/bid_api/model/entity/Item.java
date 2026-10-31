@@ -54,4 +54,6 @@ public class Item extends MongoBaseEntity {
 
     @Field(name = "brand")
     private String brand;
+
+    private String date;
 }

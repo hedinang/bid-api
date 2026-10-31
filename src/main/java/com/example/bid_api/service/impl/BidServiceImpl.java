@@ -45,7 +45,7 @@ public class BidServiceImpl implements BidService {
     @Value("${bid-email-password}")
     String bidEmailPass;
 
-    List<String> categories = Arrays.asList("3", "4", "16", "24");
+    List<String> categories = Arrays.asList("1", "3", "4", "16", "24");
 
     String conditions = IntStream.range(0, categories.size())
             .mapToObj(i -> "master_item_categories%5B" + i + "%5D=" + categories.get(i))
@@ -312,6 +312,7 @@ public class BidServiceImpl implements BidService {
                         Item item = new Item();
                         item.setBidId(bid.getBidId());
                         item.setBidStatus(bid.getBidStatus());
+                        item.setDate(bid.getOpenTime());
                         item.setItemUrl(url);
 
                         String html = htmlUtil.cloneHtml(url);
@@ -446,13 +447,23 @@ public class BidServiceImpl implements BidService {
         int accessoryCount = (int) itemList.stream().filter(item -> "Accessory".equalsIgnoreCase(item.getCategory())).count();
         int musicalInstrumentCount = (int) itemList.stream().filter(item -> "Musical instrument".equalsIgnoreCase(item.getCategory())).count();
         int smokingDeviceCount = (int) itemList.stream().filter(item -> "Smoking device".equalsIgnoreCase(item.getCategory())).count();
+        int watchCount = (int) itemList.stream().filter(item -> "WATCH".equalsIgnoreCase(item.getCategory())).count();
 
         CategorySummaryDto jewelry = new CategorySummaryDto("Jewelry", jewelryCount);
         CategorySummaryDto accessory = new CategorySummaryDto("Accessory", accessoryCount);
         CategorySummaryDto musicalInstrument = new CategorySummaryDto("Musical instrument", musicalInstrumentCount);
         CategorySummaryDto smokingDevice = new CategorySummaryDto("Smoking device", smokingDeviceCount);
+        CategorySummaryDto watch = new CategorySummaryDto("WATCH", watchCount);
 
-        return List.of(jewelry, accessory, musicalInstrument, smokingDevice);
+        return List.of(jewelry, accessory, musicalInstrument, smokingDevice, watch);
+    }
+
+    @Override
+    @Transactional
+    public List<String> getDates(){
+        List<Bid> bidList = bidRepository.findByClosed(false);
+        List<String> dates = bidList.stream().map(Bid::getOpenTime).distinct().toList();
+        return dates;
     }
 
     /* detail */

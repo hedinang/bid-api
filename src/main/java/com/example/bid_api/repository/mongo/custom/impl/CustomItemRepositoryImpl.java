@@ -84,6 +84,13 @@ public class CustomItemRepositoryImpl implements CustomItemRepository {
             );
         }
 
+        if (itemRequest.getSearchDate() != null
+                && !itemRequest.getSearchDate().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("date").is(itemRequest.getSearchDate().trim())
+            );
+        }
+
         if (itemRequest.getSearchRank() != null
                 && !itemRequest.getSearchRank().trim().isEmpty()) {
             query.addCriteria(
@@ -133,6 +140,13 @@ public class CustomItemRepositoryImpl implements CustomItemRepository {
                 && !itemRequest.getSearchBranch().trim().isEmpty()) {
             query.addCriteria(
                     Criteria.where("branch").is(itemRequest.getSearchBranch().trim())
+            );
+        }
+
+        if (itemRequest.getSearchDate() != null
+                && !itemRequest.getSearchDate().trim().isEmpty()) {
+            query.addCriteria(
+                    Criteria.where("date").is(itemRequest.getSearchDate().trim())
             );
         }
 

@@ -28,4 +28,6 @@ public interface BidService {
     int getTotalItem(String clientUrl);
 
     List<CategorySummaryDto> getCategoryList();
+
+    List<String> getDates();
 }

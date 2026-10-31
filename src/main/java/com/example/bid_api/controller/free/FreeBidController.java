@@ -27,8 +27,13 @@ public class FreeBidController {
         return new BaseResponse<>(HttpStatus.OK.value(), "Update window successfully", bidService.getBid(bidRequest));
     }
 
-    @PostMapping("category-list")
+    @PostMapping("/category-list")
     public BaseResponse<List<CategorySummaryDto>> getCategoryList() {
         return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", bidService.getCategoryList());
+    }
+
+    @PostMapping("/dates")
+    public BaseResponse<List<String>> getDates() {
+        return new BaseResponse<>(HttpStatus.OK.value(), "delete successfully", bidService.getDates());
     }
 }
