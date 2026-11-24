@@ -62,8 +62,8 @@ public class Order extends MongoBaseEntity {
     @Field(name = "category")
     private String category;
 
-    @Field(name = "branch")
-    private String branch;
+    @Field(name = "brand")
+    private String brand;
 
     @Field(name = "item_date")
     private String itemDate;
